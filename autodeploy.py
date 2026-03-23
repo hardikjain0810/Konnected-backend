@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,APIRouter
 
 
 app = FastAPI(
@@ -7,6 +7,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
-@app.get("/health")
+router = APIRouter(prefix="/health", tags=["auth"])
+
+@router.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "superrrr"}

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from models.database_models import Country, Language, Timezone, Interest
+from models.database_models import Country, Language, Timezone, Interest, RoleType
 from typing import Optional, Any, List
 
 class BaseResponse(BaseModel):
@@ -11,6 +11,7 @@ class SignupRequest(BaseModel):
     email: EmailStr
     country: Country
     birth_year: int
+    user_role: RoleType
 
 class LoginRequest(BaseModel):
     email: EmailStr

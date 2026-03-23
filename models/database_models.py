@@ -67,6 +67,7 @@ class ReportReason(enum.Enum):
     underage_concern = "underage_concern"
     other = "other"
 
+
 # TABLES 
 
 class User(Base):

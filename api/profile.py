@@ -12,17 +12,13 @@ from core.exceptions import APIException
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
-@router.get("/languages")
-async def get_languages():
-    return [lang.value for lang in Language]
-
-@router.get("/timezones")
-async def get_timezones():
-    return [tz.value for tz in Timezone]
-
-@router.get("/interests")
-async def get_interests():
-    return [interest.value for interest in Interest]
+@router.get("/data")
+async def get_data():
+    return {
+            "response_code": "1",
+            "response_msg": get_text("Data received successfully"),
+            "data": {"language":[lang.value for lang in Language],"Timezone":[tz.value for tz in Timezone],"Interest":[inter.value for inter in Interest]}
+        }
 
 @router.post("/complete",response_model=ProfileResponse)
 async def complete_profile(
@@ -35,6 +31,7 @@ async def complete_profile(
     logger.info(f"Profile completion/update attempt for user: {current_user.email}")
     profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
     
+    # Update profile section - API transfer
     if profile:
         logger.info(f"Updating existing profile for user: {current_user.email}")
         profile.display_name = request.display_name
