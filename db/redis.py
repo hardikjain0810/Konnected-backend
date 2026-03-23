@@ -11,20 +11,26 @@ class RedisClient:
             decode_responses=True
         )
 
-    def set_auth_session(self, email: str, otp: str, country: str, birth_year: int):
+    def set_auth_session(self, email: str, otp: str, country: str, birth_year: int, user_role: str = None):
         key = f"otp:{email}"
-        data = f"{otp}:{country}:{birth_year}"
+        # Store role if provided (for signup), otherwise use empty string (for login)
+        role_str = user_role if user_role else ""
+        data = f"{otp}:{country}:{birth_year}:{role_str}"
         self.client.setex(key, settings.OTP_TTL, data)
 
     def get_auth_session(self, email: str) -> tuple:
         key = f"otp:{email}"
         data = self.client.get(key)
         if not data:
-            return None, None, None
+            return None, None, None, None
         parts = data.split(':')
-        if len(parts) == 3:
-            return parts[0], parts[1], int(parts[2])
-        return None, None, None
+        if len(parts) >= 3:
+            otp = parts[0]
+            country = parts[1]
+            birth_year = int(parts[2])
+            role = parts[3] if len(parts) > 3 and parts[3] else None
+            return otp, country, birth_year, role
+        return None, None, None, None
 
     def delete_otp(self, email: str):
         key = f"otp:{email}"

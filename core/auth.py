@@ -5,9 +5,11 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 from models.database_models import User
 import jwt
+import uuid
 from typing import Optional
 from core.config import settings
 from core.translations import get_text
+from core.logging_config import logger
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/verify")
 
@@ -45,8 +47,18 @@ def get_current_user(request: Request, token: str = Depends(oauth2_scheme), db: 
             response_msg=get_text("auth_failed", lang),
         )
 
-    user = db.query(User).filter(User.id == user_id).first()
+    try:
+        user_uuid = uuid.UUID(user_id)
+        user = db.query(User).filter(User.id == user_uuid).first()
+    except (ValueError, AttributeError):
+        logger.warning(f"Invalid UUID in token: {user_id}")
+        raise APIException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            response_msg=get_text("auth_failed", lang),
+        )
+
     if user is None:
+        logger.warning(f"User not found for ID: {user_id}")
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND, 
             response_msg=get_text("user_not_found", lang)

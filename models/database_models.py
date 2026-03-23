@@ -60,6 +60,15 @@ class Interest(enum.Enum):
     Reading = "Reading"
     Travel = "Travel"
 
+class TutorTopic(enum.Enum):
+    Python = "Python"
+    Java = "Java"
+    DotNet = "DotNet"
+    Reading = "Reading"
+    DL = "DL"
+    Culture = "Culture"
+    Pronunciation = "Pronunciation"
+
 class ReportReason(enum.Enum):
     inappropriate_behavior = "inappropriate_behavior"
     harassment = "harassment"
@@ -105,10 +114,11 @@ class TutorProfile(Base):
     __tablename__ = "tutor_profiles"
 
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
-    headline = Column(String)
-    bio = Column(String)
-    languages = Column(String)
-    topics = Column(String)
+    headline = Column(String(100))
+    bio = Column(String(500))
+    languages_taught = Column(ARRAY(String))
+    languages_spoken = Column(ARRAY(String))
+    topics = Column(ARRAY(String))
     is_published = Column(Boolean, default=False)
 
 

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.database_models import User, Country
+from models.database_models import User, Country, UserRole, RoleType
 from schemas.schemas import SignupRequest, LoginRequest, VerifyOTPRequest, TokenResponse, BaseResponse, TokenData
 from core.utils import validate_email_eligibility, check_age_eligibility, generate_otp, get_lang
 from db.redis import redis_client
@@ -38,7 +38,7 @@ async def signup(request: SignupRequest, response: Response, req: Request, db: S
         raise APIException(status_code=400, response_msg=get_text("invalid_age", lang))
     
     otp = generate_otp()
-    redis_client.set_auth_session(request.email, otp, request.country.value, request.birth_year)
+    redis_client.set_auth_session(request.email, otp, request.country.value, request.birth_year, request.user_role.value)
     redis_client.increment_send_count(request.email)
     
     response.set_cookie(key="session_email", value=request.email, httponly=True, max_age=600) # 10 minutes
@@ -86,7 +86,7 @@ async def verify(request: VerifyOTPRequest, response: Response, req: Request, db
         logger.warning(f"Verification limit exceeded for email: {session_email}")
         raise APIException(status_code=429, response_msg=get_text("too_many_verify", lang))
     
-    stored_otp, country, birth_year = redis_client.get_auth_session(session_email)
+    stored_otp, country, birth_year, user_role = redis_client.get_auth_session(session_email)
     if not stored_otp:
         redis_client.increment_verify_count(session_email)
         logger.warning(f"OTP not found or expired for email: {session_email}")
@@ -110,6 +110,14 @@ async def verify(request: VerifyOTPRequest, response: Response, req: Request, db
             created_at=datetime.now(timezone.utc)
         )
         db.add(user)
+        db.flush() # Get user ID without committing yet
+
+        # Add user role if it was a signup (user_role will be present)
+        if user_role:
+            logger.info(f"Adding role {user_role} for user: {session_email}")
+            role = UserRole(user_id=user.id, role=RoleType(user_role))
+            db.add(role)
+        
         db.commit()
         db.refresh(user)
     

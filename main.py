@@ -3,7 +3,8 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from api.auth import router as auth_router
-from api.profile import router as profile_router
+from api.user_profile import router as profile_router
+from api.tutor import router as tutor_router
 from db.database import engine
 from models.database_models import Base
 from core.logging_config import logger
@@ -54,12 +55,13 @@ async def generic_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"response_code": "0", "response_msg": msg}
+        content={"response_code": "0", "response_msg": f"{msg}: {str(exc)}"}
     )
 
 # Include routers
 app.include_router(auth_router)
 app.include_router(profile_router)
+app.include_router(tutor_router)
 
 @app.get("/")
 async def root():

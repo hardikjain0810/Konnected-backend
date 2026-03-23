@@ -14,11 +14,15 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "verify_success": "Verification successful.",
         "session_expired": "Session expired or not found. Please try signing up or logging in again.",
         "profile_success": "Profile completed successfully.",
+        "profile_update_success": "Profile updated successfully.",
+        "profile_exists": "Profile already exists.",
+        "profile_not_found": "Profile not found.",
         "profile_error": "Error saving profile: {error}",
         "internal_error": "Internal server error",
         "validation_error": "Validation error",
         "auth_failed": "Could not validate credentials",
-        "token_expired": "Token has expired"
+        "token_expired": "Token has expired",
+        "not_a_tutor": "Access denied. You are not a tutor."
     },
     "ko": {
         "user_exists": "이미 존재하는 사용자입니다. 로그인해 주세요.",
@@ -33,11 +37,15 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "verify_success": "인증에 성공했습니다.",
         "session_expired": "세션이 만료되었거나 찾을 수 없습니다. 다시 회원가입 또는 로그인을 시도해 주세요.",
         "profile_success": "프로필 설정이 완료되었습니다.",
+        "profile_update_success": "프로필이 성공적으로 업데이트되었습니다.",
+        "profile_exists": "프로필이 이미 존재합니다.",
+        "profile_not_found": "프로필을 찾을 수 없습니다.",
         "profile_error": "프로필 저장 중 오류 발생: {error}",
         "internal_error": "서버 내부 오류",
         "validation_error": "유효성 검사 오류",
         "auth_failed": "인증 정보를 확인할 수 없습니다.",
-        "token_expired": "토큰이 만료되었습니다."
+        "token_expired": "토큰이 만료되었습니다.",
+        "not_a_tutor": "접근이 거부되었습니다. 튜터가 아닙니다."
     }
 }
 

@@ -1,0 +1,115 @@
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
+from db.database import get_db
+from models.database_models import User, Profile, Language, Timezone, Interest
+from schemas.schemas import ProfileCreate, ProfileResponse, ProfileData
+from core.utils import get_lang
+from core.auth import get_current_user
+from core.logging_config import logger
+from core.translations import get_text
+from core.exceptions import APIException
+
+router = APIRouter(prefix="/profile", tags=["profile"])
+
+@router.get("/data")
+async def get_data():
+    return {
+            "response_code": "1",
+            "response_msg": get_text("Data received successfully"),
+            "data": {"language":[lang.value for lang in Language],"Timezone":[tz.value for tz in Timezone],"Interest":[inter.value for inter in Interest]}
+        }
+
+@router.post("", response_model=ProfileResponse)
+async def create_profile(
+    request: ProfileCreate,
+    req: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    lang = get_lang(req)
+    logger.info(f"Profile creation attempt for user: {current_user.email}")
+    
+    existing_profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+    if existing_profile:
+        logger.warning(f"Profile already exists for user: {current_user.email}")
+        raise APIException(status_code=400, response_msg=get_text("profile_exists", lang))
+
+    profile = Profile(
+        user_id=current_user.id,
+        display_name=request.display_name,
+        timezone=request.timezone,
+        primary_language=request.primary_language,
+        target_language=request.target_language,
+        interests=[interest.value for interest in request.interests],
+        bio=request.bio
+    )
+    db.add(profile)
+    
+    try:
+        db.commit()
+        db.refresh(profile)
+        logger.info(f"Profile created successfully for user: {current_user.email}")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating profile for user {current_user.email}: {e}", exc_info=True)
+        raise APIException(status_code=500, response_msg=get_text("profile_error", lang, error=str(e)))
+    
+    return {
+        "response_code": "1",
+        "response_msg": get_text("profile_success", lang),
+        "data": {
+            "user_id": str(profile.user_id),
+            "display_name": profile.display_name,
+            "timezone": profile.timezone.value,
+            "primary_language": profile.primary_language.value,
+            "target_language": profile.target_language.value,
+            "interests": profile.interests,
+            "bio": profile.bio
+        }
+    }
+
+@router.put("", response_model=ProfileResponse)
+async def update_profile(
+    request: ProfileCreate,
+    req: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    lang = get_lang(req)
+    logger.info(f"Profile update attempt for user: {current_user.email}")
+    
+    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+    if not profile:
+        logger.warning(f"Profile not found for user: {current_user.email}")
+        raise APIException(status_code=404, response_msg=get_text("profile_not_found", lang))
+
+    profile.display_name = request.display_name
+    profile.timezone = request.timezone
+    profile.primary_language = request.primary_language
+    profile.target_language = request.target_language
+    profile.interests = [interest.value for interest in request.interests]
+    profile.bio = request.bio
+    
+    try:
+        db.commit()
+        db.refresh(profile)
+        logger.info(f"Profile updated successfully for user: {current_user.email}")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating profile for user {current_user.email}: {e}", exc_info=True)
+        raise APIException(status_code=500, response_msg=get_text("profile_error", lang, error=str(e)))
+    
+    return {
+        "response_code": "1",
+        "response_msg": get_text("profile_update_success", lang),
+        "data": {
+            "user_id": str(profile.user_id),
+            "display_name": profile.display_name,
+            "timezone": profile.timezone.value,
+            "primary_language": profile.primary_language.value,
+            "target_language": profile.target_language.value,
+            "interests": profile.interests,
+            "bio": profile.bio
+        }
+    }

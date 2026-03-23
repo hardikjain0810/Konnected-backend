@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from models.database_models import Country, Language, Timezone, Interest, RoleType
+from models.database_models import Country, Language, Timezone, Interest, RoleType, TutorTopic
 from typing import Optional, Any, List
 
 class BaseResponse(BaseModel):
@@ -45,3 +45,22 @@ class ProfileData(BaseModel):
 
 class ProfileResponse(BaseResponse):
     data: Optional[ProfileData] = None
+
+class TutorProfileCreate(BaseModel):
+    headline: str = Field(..., min_length=10, max_length=100)
+    bio: str = Field(..., min_length=50, max_length=500)
+    languages_taught: List[Language]
+    languages_spoken: List[Language]
+    topics: List[TutorTopic]
+
+class TutorProfileData(BaseModel):
+    user_id: str
+    headline: str
+    bio: str
+    languages_taught: List[Language]
+    languages_spoken: List[Language]
+    topics: List[TutorTopic]
+    is_published: bool
+
+class TutorProfileResponse(BaseResponse):
+    data: Optional[TutorProfileData] = None
