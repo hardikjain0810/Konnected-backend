@@ -1,12 +1,17 @@
 import random
 import string
 from datetime import datetime
-from database_models import Country
+from models.database_models import Country
+from fastapi import Request
 
 BLOCKED_KR_DOMAINS = [
     "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", 
     "icloud.com", "proton.me", "naver.com", "daum.net", "kakao.com"
 ]
+
+def get_lang(request: Request) -> str:
+    lang = request.headers.get("Accept-Language", "en")
+    return "ko" if "ko" in lang.lower() else "en"
 
 def generate_otp(length: int = 6) -> str:
     return ''.join(random.choices(string.digits, k=length))

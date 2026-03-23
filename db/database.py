@@ -1,9 +1,8 @@
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
+from core.config import settings
 
-db_url = "postgresql://postgres:12345678@localhost:5432/Konnected"
-
-engine = create_engine(db_url)
+engine = create_engine(settings.DATABASE_URL)
 
 SessionLocal = sessionmaker(
     autocommit=False,

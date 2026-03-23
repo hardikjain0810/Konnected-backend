@@ -3,6 +3,7 @@ import enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, DateTime, Enum, CheckConstraint, UniqueConstraint, Time
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 

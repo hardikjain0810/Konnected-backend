@@ -1,6 +1,6 @@
 import redis
 import psycopg2
-from config import settings
+from core.config import settings
 
 def check_connections():
     print("Checking Redis connection...")

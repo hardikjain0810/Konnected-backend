@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from database_models import Country, Language, Timezone, Interest
+from models.database_models import Country, Language, Timezone, Interest
 from typing import Optional, Any, List
 
 class BaseResponse(BaseModel):

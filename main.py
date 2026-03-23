@@ -2,14 +2,15 @@ from fastapi import FastAPI, Depends, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from auth_router import router as auth_router
-from profile_router import router as profile_router
-from database import engine
-from database_models import Base
-from logging_config import logger
-from translations import get_text
+from api.auth import router as auth_router
+from api.profile import router as profile_router
+from db.database import engine
+from models.database_models import Base
+from core.logging_config import logger
+from core.translations import get_text
 
-from exceptions import APIException
+from core.utils import get_lang
+from core.exceptions import APIException
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -19,10 +20,6 @@ app = FastAPI(
     description="Peer-to-peer language tutoring marketplace for high school students",
     version="1.0.0"
 )
-
-def get_lang(request: Request) -> str:
-    lang = request.headers.get("Accept-Language", "en")
-    return "ko" if "ko" in lang.lower() else "en"
 
 @app.exception_handler(APIException)
 async def api_exception_handler(request: Request, exc: APIException):

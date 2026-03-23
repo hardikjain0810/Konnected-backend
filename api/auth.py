@@ -1,25 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from database import get_db
-from database_models import User, Country
-from schemas import SignupRequest, LoginRequest, VerifyOTPRequest, TokenResponse, BaseResponse, TokenData
-from utils import validate_email_eligibility, check_age_eligibility, generate_otp
-from redis_client import redis_client
-from auth import create_access_token
+from db.database import get_db
+from models.database_models import User, Country
+from schemas.schemas import SignupRequest, LoginRequest, VerifyOTPRequest, TokenResponse, BaseResponse, TokenData
+from core.utils import validate_email_eligibility, check_age_eligibility, generate_otp, get_lang
+from db.redis import redis_client
+from core.auth import create_access_token
 from datetime import datetime,timezone
-from logging_config import logger
-from translations import get_text
-
-from exceptions import APIException
-
-router = APIRouter(prefix="/auth", tags=["auth"])
-
+from core.logging_config import logger
+from core.translations import get_text
+from core.exceptions import APIException
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response, Cookie
 
-def get_lang(request: Request) -> str:
-    lang = request.headers.get("Accept-Language", "en")
-    return "ko" if "ko" in lang.lower() else "en"
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/signup", response_model=BaseResponse)
 async def signup(request: SignupRequest, response: Response, req: Request, db: Session = Depends(get_db)):

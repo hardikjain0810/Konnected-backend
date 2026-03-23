@@ -2,12 +2,12 @@ from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from database import get_db
-from database_models import User
+from db.database import get_db
+from models.database_models import User
 import jwt
 from typing import Optional
-from config import settings
-from translations import get_text
+from core.config import settings
+from core.translations import get_text
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/verify")
 
@@ -21,11 +21,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
-from exceptions import APIException
-
-def get_lang(request: Request) -> str:
-    lang = request.headers.get("Accept-Language", "en")
-    return "ko" if "ko" in lang.lower() else "en"
+from core.utils import get_lang
+from core.exceptions import APIException
 
 def get_current_user(request: Request, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     lang = get_lang(request)

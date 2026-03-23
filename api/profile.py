@@ -1,20 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from database import get_db
-from database_models import User, Profile, Language, Timezone, Interest
-from schemas import ProfileCreate, ProfileResponse, ProfileData
-from auth import get_current_user
-from logging_config import logger
-from translations import get_text
-
-from exceptions import APIException
+from db.database import get_db
+from models.database_models import User, Profile, Language, Timezone, Interest
+from schemas.schemas import ProfileCreate, ProfileResponse, ProfileData
+from core.utils import get_lang
+from core.auth import get_current_user
+from core.logging_config import logger
+from core.translations import get_text
+from core.exceptions import APIException
 
 router = APIRouter(prefix="/profile", tags=["profile"])
-
-def get_lang(request: Request) -> str:
-    lang = request.headers.get("Accept-Language", "en")
-    return "ko" if "ko" in lang.lower() else "en"
 
 @router.get("/languages")
 async def get_languages():
