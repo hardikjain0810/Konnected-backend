@@ -1,0 +1,26 @@
+import random
+import string
+from datetime import datetime
+from database_models import Country
+
+BLOCKED_KR_DOMAINS = [
+    "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", 
+    "icloud.com", "proton.me", "naver.com", "daum.net", "kakao.com"
+]
+
+def generate_otp(length: int = 6) -> str:
+    return ''.join(random.choices(string.digits, k=length))
+
+def validate_email_eligibility(email: str, country: Country) -> bool:
+    domain = email.split('@')[-1].lower()
+    
+    if country == Country.US:
+        return domain.endswith('.edu')
+    elif country == Country.KR:
+        return domain not in BLOCKED_KR_DOMAINS
+    return False
+
+def check_age_eligibility(birth_year: int) -> bool:
+    current_year = datetime.now().year
+    age = current_year - birth_year
+    return 14 <= age <= 17
