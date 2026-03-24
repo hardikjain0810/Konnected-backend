@@ -27,7 +27,7 @@ async def signup(request: SignupRequest, response: Response, req: Request, db: S
 
     if not redis_client.check_send_limit(request.email):
         logger.warning(f"OTP send limit exceeded for email: {request.email}")
-        raise HTTPException(status_code=429, respond_msg=get_text("too_many_otp", lang))
+        raise HTTPException(status_code=429, detail=get_text("too_many_otp", lang))
     
     if not validate_email_eligibility(request.email, request.country):
         logger.warning(f"Invalid email domain for email: {request.email}")

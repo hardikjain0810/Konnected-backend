@@ -23,6 +23,7 @@ class UserStatus(enum.Enum):
 class RoleType(enum.Enum):
     student = "student"
     tutor = "tutor"
+    both = "both"
 
 class SlotStatus(enum.Enum):
     open = "open"
@@ -34,12 +35,6 @@ class BookingStatus(enum.Enum):
     canceled = "canceled"
     completed = "completed"
     no_show = "no_show"
-
-class BookingGoal(enum.Enum):
-    conversation = "conversation"
-    pronunciation = "pronunciation"
-    homework = "homework"
-    culture = "culture"
 
 class Language(enum.Enum):
     English = "English"
@@ -155,7 +150,7 @@ class Booking(Base):
     slot_id = Column(UUID(as_uuid=True), ForeignKey("tutor_slots.id"), unique=True)
 
     status = Column(Enum(BookingStatus))
-    goal = Column(Enum(BookingGoal))
+    goal = str
     note = Column(String)
 
     starts_at = Column(DateTime)

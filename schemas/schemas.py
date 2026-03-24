@@ -1,6 +1,18 @@
+from datetime import datetime
+from typing import Any, List, Optional
+from datetime import date, time
 from pydantic import BaseModel, EmailStr, Field
-from models.database_models import Country, Language, Timezone, Interest, RoleType, TutorTopic
-from typing import Optional, Any, List
+
+from models.database_models import (
+    BookingStatus,
+    Country,
+    Interest,
+    Language,
+    RoleType,
+    SlotStatus,
+    Timezone,
+    TutorTopic,
+)
 
 class BaseResponse(BaseModel):
     response_code: str

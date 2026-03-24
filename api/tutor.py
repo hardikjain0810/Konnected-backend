@@ -1,14 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.database_models import User, TutorProfile, Language, TutorTopic, RoleType, UserRole
+from models.database_models import User, TutorProfile, Language, TutorTopic, RoleType, UserRole, TutorSlot, Booking,BookingStatus
 from schemas.schemas import TutorProfileCreate, TutorProfileResponse, TutorProfileData
+import datetime
 from core.utils import get_lang
 from core.auth import get_current_user
 from core.logging_config import logger
 from core.translations import get_text
 from core.exceptions import init_exception_handlers
 from typing import List
+from sqlalchemy import and_
+from uuid import uuid4
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
 
@@ -127,3 +130,5 @@ async def update_tutor_profile(
             "is_published": tutor_profile.is_published
         }
     }
+
+
