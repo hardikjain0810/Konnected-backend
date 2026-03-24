@@ -29,3 +29,17 @@ def check_age_eligibility(birth_year: int) -> bool:
     current_year = datetime.now().year
     age = current_year - birth_year
     return 14 <= age <= 17
+
+def success_response(message: str, data=None):
+    return {
+        "response_code": "1",
+        "detail": message,
+        "data": data
+    }
+
+def error_response(message: str):
+    return {
+        "response_code": "0",
+        "detail": message
+    }
+

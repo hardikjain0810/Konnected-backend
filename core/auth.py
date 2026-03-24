@@ -24,7 +24,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 from core.utils import get_lang
-from core.exceptions import APIException
+from core.exceptions import init_exception_handlers
 
 def get_current_user(request: Request, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     lang = get_lang(request)
@@ -32,19 +32,19 @@ def get_current_user(request: Request, token: str = Depends(oauth2_scheme), db: 
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
-            raise APIException(
+            raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                response_msg=get_text("auth_failed", lang),
+                detail=get_text("auth_failed", lang),
             )
     except jwt.ExpiredSignatureError:
-        raise APIException(
+        raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            response_msg=get_text("token_expired", lang),
+            detail=get_text("token_expired", lang),
         )
     except jwt.InvalidTokenError:
-        raise APIException(
+        raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            response_msg=get_text("auth_failed", lang),
+            detail=get_text("auth_failed", lang),
         )
 
     try:
@@ -52,15 +52,15 @@ def get_current_user(request: Request, token: str = Depends(oauth2_scheme), db: 
         user = db.query(User).filter(User.id == user_uuid).first()
     except (ValueError, AttributeError):
         logger.warning(f"Invalid UUID in token: {user_id}")
-        raise APIException(
+        raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            response_msg=get_text("auth_failed", lang),
+            detail=get_text("auth_failed", lang),
         )
 
     if user is None:
         logger.warning(f"User not found for ID: {user_id}")
-        raise APIException(
+        raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
-            response_msg=get_text("user_not_found", lang)
+            detail=get_text("user_not_found", lang)
         )
     return user

@@ -4,7 +4,7 @@ from typing import Optional, Any, List
 
 class BaseResponse(BaseModel):
     response_code: str
-    response_msg: str
+    detail: str
     data: Optional[Any] = None
 
 class SignupRequest(BaseModel):

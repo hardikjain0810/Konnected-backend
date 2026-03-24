@@ -11,7 +11,7 @@ from core.logging_config import logger
 from core.translations import get_text
 
 from core.utils import get_lang
-from core.exceptions import APIException
+from core.exceptions import init_exception_handlers
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -22,41 +22,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-@app.exception_handler(APIException)
-async def api_exception_handler(request: Request, exc: APIException):
-    logger.error(f"API exception: {exc.detail}", exc_info=True)
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"response_code": "0", "response_msg": exc.detail}
-    )
-
-@app.exception_handler(StarletteHTTPException)
-async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    logger.error(f"HTTP exception: {exc.detail}", exc_info=True)
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"response_code": "0", "response_msg": exc.detail}
-    )
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    lang = get_lang(request)
-    msg = get_text("validation_error", lang)
-    logger.error(f"Validation error: {exc.errors()}", exc_info=True)
-    return JSONResponse(
-        status_code=422,
-        content={"response_code": "0", "response_msg": msg}
-    )
-
-@app.exception_handler(Exception)
-async def generic_exception_handler(request: Request, exc: Exception):
-    lang = get_lang(request)
-    msg = get_text("internal_error", lang)
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={"response_code": "0", "response_msg": f"{msg}: {str(exc)}"}
-    )
+init_exception_handlers(app)
 
 # Include routers
 app.include_router(auth_router)
