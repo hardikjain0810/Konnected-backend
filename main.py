@@ -9,7 +9,7 @@ from db.database import engine
 from models.database_models import Base
 from core.logging_config import logger
 from core.translations import get_text
-
+import os
 from core.utils import get_lang
 from core.exceptions import init_exception_handlers
 
@@ -35,4 +35,5 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
