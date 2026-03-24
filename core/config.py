@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+import os
 
 class Settings(BaseSettings):
     # App Config
@@ -9,10 +10,13 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = "postgresql://postgres:12345678@localhost:5432/Konnected"
+
+    # Railway will provide this automatically if you linked the service
+    REDIS_URL: str = os.getenv("REDIS_URL", "")
     
-    # Redis
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
+    # Fallbacks for local dev
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
     REDIS_DB: int = 0
     
     # OTP Config

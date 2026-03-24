@@ -4,12 +4,19 @@ import time
 
 class RedisClient:
     def __init__(self):
-        self.client = redis.Redis(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            db=settings.REDIS_DB,
-            decode_responses=True
-        )
+        # Use the full URL if it exists, otherwise fallback to individual settings
+        if settings.REDIS_URL:
+            self.client = redis.from_url(
+                settings.REDIS_URL, 
+                decode_responses=True
+            )
+        else:
+            self.client = redis.Redis(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                db=settings.REDIS_DB,
+                decode_responses=True
+            )
 
     def set_auth_session(self, email: str, otp: str, country: str, birth_year: int, user_role: str = None):
         key = f"otp:{email}"
