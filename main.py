@@ -5,6 +5,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from api.auth import router as auth_router
 from api.user_profile import router as profile_router
 from api.tutor import router as tutor_router
+from api.tutor_availability import router as tutor_availability
 from db.database import engine
 from models.database_models import Base
 from core.logging_config import logger
@@ -28,6 +29,7 @@ init_exception_handlers(app)
 app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(tutor_router)
+app.include_router(tutor_availability)
 
 @app.get("/")
 async def root():

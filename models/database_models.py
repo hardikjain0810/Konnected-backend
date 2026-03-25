@@ -1,7 +1,7 @@
 import uuid
 import enum
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, DateTime, Enum, CheckConstraint, UniqueConstraint, Time
+from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, DateTime, Enum, CheckConstraint, UniqueConstraint, Time, Date
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import declarative_base
 
@@ -109,10 +109,11 @@ class TutorProfile(Base):
     __tablename__ = "tutor_profiles"
 
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
+    name = Column(String)
     headline = Column(String(100))
     bio = Column(String(500))
-    languages_taught = Column(ARRAY(String))
-    languages_spoken = Column(ARRAY(String))
+    languages_taught = Column(String)
+    languages_spoken = Column(String)
     topics = Column(ARRAY(String))
     is_published = Column(Boolean, default=False)
 
@@ -122,9 +123,10 @@ class AvailabilityRule(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tutor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    weekday = Column(Integer)
+    date = Column(Date)
     start_time = Column(Time)
     end_time = Column(Time)
+    topic = Column(String)
 
 
 class TutorSlot(Base):
