@@ -102,8 +102,8 @@ class AvailabilityResponse(BaseModel):
 class TutorRecommendation(BaseModel):
     id: UUID
     display_name: str
-    teaches_languages: str  # e.g., ["Korean", "English"]
-    topics: List[str]            # e.g., ["Conversation", "Culture"]
+    teaches_languages: str  
+    topics: List[str]        
     next_slot: Optional[datetime] = None
     
 class MarketplaceResponse(BaseModel):
