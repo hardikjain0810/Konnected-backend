@@ -185,7 +185,7 @@ async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
         filter(
             AvailabilityRule.tutor_id == tutor_id,
             AvailabilityRule.start_time > datetime.now(timezone.utc),
-            AvailabilityRule.is_booked == False
+            AvailabilityRule.is_booked == open
         ).\
         order_by(asc(AvailabilityRule.start_time)).\
         limit(3).all()
