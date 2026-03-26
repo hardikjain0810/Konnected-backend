@@ -34,8 +34,8 @@ class VerifyOTPRequest(BaseModel):
 
 class TokenData(BaseModel):
     token: str 
-    tutor_id: UUID
-    student_id: UUID
+    tutor_id: Optional[UUID] = None
+    student_id: Optional[UUID] = None
 
 class TokenResponse(BaseResponse):
     data: Optional[TokenData] = None
