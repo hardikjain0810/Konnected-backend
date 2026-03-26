@@ -61,8 +61,8 @@ class ProfileResponse(BaseResponse):
 
 class TutorProfileCreate(BaseModel):
     name: str
-    headline: str = Field(..., min_length=10, max_length=100)
-    bio: str = Field(..., min_length=50, max_length=500)
+    headline: str = Field(..., min_length=5, max_length=100)
+    bio: str = Field(..., min_length=5, max_length=500)
     languages_taught: str
     languages_spoken: str
     topics: List[TutorTopic]
