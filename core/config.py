@@ -3,6 +3,10 @@ from functools import lru_cache
 import os
 
 class Settings(BaseSettings):
+    # New Static OTP settings
+    APP_ENV: str = os.getenv("APP_ENV", "development") # Default to dev
+    STATIC_OTP: str = os.getenv("STATIC_OTP", "123456")
+
     # App Config
     SECRET_KEY: str = "Konnected"
     ALGORITHM: str = "HS256"

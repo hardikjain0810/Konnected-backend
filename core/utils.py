@@ -14,7 +14,8 @@ def get_lang(request: Request) -> str:
     return "ko" if "ko" in lang.lower() else "en"
 
 def generate_otp(length: int = 6) -> str:
-    return ''.join(random.choices(string.digits, k=length))
+    return 123456
+    #return ''.join(random.choices(string.digits, k=length))
 
 def validate_email_eligibility(email: str, country: Country) -> bool:
     domain = email.split('@')[-1].lower()
