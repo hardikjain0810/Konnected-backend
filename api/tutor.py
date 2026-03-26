@@ -148,24 +148,25 @@ def get_home_tutors(
     if student is None:
         raise HTTPException(status_code=401, detail="User doesn't exist.")
     # Query Tutors (Filtering by is_published and Language)
-    tutors = db.query(TutorProfile,TutorProfile.name).filter(
+    tutor_profiles = db.query(TutorProfile).filter(
         TutorProfile.is_published == True,
         TutorProfile.languages_taught == student.primary_language.value 
     ).all()
-    logger.info(f"Tutors : {tutors}")
+    logger.info(f"Tutors : {tutor_profiles}")
     results = []
-    for tutor, name in tutors:
+    current_time = datetime.now(timezone.utc)
+    for profile in tutor_profiles:
         # 3. Find the very next open slot for this tutor
         next_val = db.query(TutorSlot.start_at).filter(
-            TutorSlot.tutor_id == tutor.user_id,
+            TutorSlot.tutor_id == profile.user_id,
             TutorSlot.status == "open",
-            TutorSlot.start_at > datetime.now()
+            TutorSlot.start_at > current_time
         ).order_by(TutorSlot.start_at.asc()).first()
 
         results.append({
-            "display_name": name,
-            "teaches_languages": tutor.languages_taught,
-            "topics": tutor.topics,
+            "display_name": profile.name,
+            "teaches_languages": profile.languages_taught,
+            "topics": profile.topics,
             "next_slot": next_val[0] if next_val else None
         })
 

@@ -153,7 +153,6 @@ class Booking(Base):
 
     status = Column(Enum(BookingStatus))
     goal = str
-    note = Column(String)
 
     starts_at = Column(DateTime)
     ends_at = Column(DateTime)

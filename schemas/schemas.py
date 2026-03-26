@@ -81,17 +81,13 @@ class TutorProfileData(BaseModel):
 class TutorProfileResponse(BaseResponse):
     data: Optional[TutorProfileData] = None
 
-class AvailabilityItem(BaseModel):
+class AvailabilityRuleCreate(BaseModel):
     availability_date: date
     start_time: time
     end_time: time
     topic: str
 
-class AvailabilityRuleCreate(BaseModel):
-    availability: List[AvailabilityItem]
-
 class AvailabilityRuleData(BaseModel):
-    id: Optional[str] = None
     tutor_id: str
     availability_date: date
     start_time: time
@@ -99,6 +95,8 @@ class AvailabilityRuleData(BaseModel):
     topic: str
 
 class AvailabilityResponse(BaseModel):
+    response_code: str = "1"
+    detail: str
     data: Optional[AvailabilityRuleData] = None
 
 class TutorRecommendation(BaseModel):
@@ -125,4 +123,21 @@ class TutorDetailData(BaseModel):
 
 class TutorDetailResponse(BaseModel):
     data: Optional[TutorDetailData] = None
+
+class SlotBookingCreate(BaseModel):
+    slot_id: UUID
+    goal: str
+
+class SlotBookingData(BaseModel):
+    booking_id: UUID
+    tutor_id: UUID
+    slot_id: UUID
+    starts_at: datetime
+    ends_at: datetime
+    status: str
+
+class SlotBookingResponse(BaseModel):
+    response_code: str = "1"
+    detail: str
+    data: Optional[SlotBookingData] = None
 

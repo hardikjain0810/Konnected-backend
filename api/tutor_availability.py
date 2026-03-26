@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, time, date
+from datetime import datetime, timedelta, date
 from core.logging_config import get_logger
 from core.utils import get_lang
 from core.auth import get_current_user
 from db.database import get_db
 from core.translations import get_text
-from models.database_models import UserRole, AvailabilityRule, TutorSlot, SlotStatus, RoleType
+from models.database_models import AvailabilityRule, TutorSlot
 from schemas.schemas import AvailabilityRuleCreate, AvailabilityResponse
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
@@ -15,103 +15,85 @@ logger = get_logger()
 @router.post("/availability", response_model=AvailabilityResponse)
 def set_availability(
     request: AvailabilityRuleCreate,
-    req: Request,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    lang = get_lang(req)
+    # 1. Date Range Validation (The 21-Day Rule)
+    today = date.today()
+    max_future_date = today + timedelta(days=21)
+
+    if request.availability_date < today:
+        raise HTTPException(status_code=400, detail="Cannot set availability for a past date")
     
-    #Role Validation: Ensure user is a tutor
-    role = db.query(UserRole).filter(
-        UserRole.user_id == current_user.id,
-        UserRole.role == RoleType.tutor
-    ).first()
+    if request.availability_date > max_future_date:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"You can only set availability up to 21 days in advance (until {max_future_date})"
+        )
 
-    if not role:
-        logger.warning(f"Non-tutor tried to set availability: {current_user.id}")
-        raise HTTPException(status_code=403, detail="Only tutors can set availability")
+    # 2. Duration Validation (Multiples of 30)
+    start_dt = datetime.combine(request.availability_date, request.start_time)
+    end_dt = datetime.combine(request.availability_date, request.end_time)
 
-    # Clear existing rules for this tutor
-    db.query(AvailabilityRule).filter(AvailabilityRule.tutor_id == current_user.id).delete()
+    if end_dt <= start_dt:
+        raise HTTPException(status_code=400, detail="End time must be after start time")
 
-    # Process Rules and Generate Slots
-    for item in request.availability:
-        if item.start_time >= item.end_time:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid time range for {item.availability_date}"
-            )
-        
-        today = date.today()
-        
-        # Check if the date is in the past
-        if item.availability_date < today:
-            logger.warning(f"Tutor tried to set past date: {item.availability_date}")
-            raise HTTPException(
-                status_code=400, # Use 400 for Bad Request
-                detail=f"Cannot set availability for a past date: {item.availability_date}"
-            )
+    duration_minutes = (end_dt - start_dt).total_seconds() / 60
+    if duration_minutes % 30 != 0:
+        raise HTTPException(
+            status_code=400, 
+            detail="Duration must be a multiple of 30 minutes (e.g., 30, 60, 90 mins)"
+        )
 
-        # If it's today, ensure the start_time hasn't already passed
-        if item.availability_date == today:
-            current_time = datetime.now().time()
-            if item.start_time <= current_time:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Start time must be in the future for today's slots"
-                )
-
-        # Save the Rule
+    try:
+        # 3. Save the main Availability Rule
         new_rule = AvailabilityRule(
             tutor_id=current_user.id,
-            date=item.availability_date,
-            start_time=item.start_time,
-            end_time=item.end_time,
-            topic=item.topic
+            date=request.availability_date,
+            start_time=request.start_time,
+            end_time=request.end_time,
+            topic=request.topic
         )
         db.add(new_rule)
 
-        # 4. Generate 30-minute Slots
-        # Calculate how many 30-min blocks fit in the range
-        current_dt = datetime.combine(item.availability_date, item.start_time)
-        end_dt = datetime.combine(item.availability_date, item.end_time)
-
-        while current_dt + timedelta(minutes=30) <= end_dt:
-            slot_end = current_dt + timedelta(minutes=30)
+        # 4. Generate the 30-minute Slots
+        # This "carves" a 60-min window into two 30-min entries
+        temp_start = start_dt
+        while temp_start + timedelta(minutes=30) <= end_dt:
+            temp_end = temp_start + timedelta(minutes=30)
             
-            # Check if slot already exists to avoid UniqueConstraint errors
-            existing_slot = db.query(TutorSlot).filter(
+            # Check for overlaps to avoid UniqueConstraint errors
+            exists = db.query(TutorSlot).filter(
                 TutorSlot.tutor_id == current_user.id,
-                TutorSlot.start_at == current_dt
+                TutorSlot.start_at == temp_start
             ).first()
 
-            if not existing_slot:
+            if not exists:
                 new_slot = TutorSlot(
                     tutor_id=current_user.id,
-                    start_at=current_dt,
-                    end_at=slot_end,
-                    status=SlotStatus.open # Mark as open for booking [cite: 121, 179]
+                    start_at=temp_start,
+                    end_at=temp_end,
+                    status="open"
                 )
                 db.add(new_slot)
             
-            current_dt = slot_end
+            temp_start = temp_end # Move to the next 30-min block
 
-    try:
         db.commit()
-        logger.info(f"Availability and slots generated for tutor: {current_user.id}")
+        
+        return {
+            "response_code": "1",
+            "detail": "Availability and 30-minute slots generated successfully!",
+            "data": {
+                "tutor_id": str(current_user.id),
+                "availability_date": request.availability_date,
+                "start_time": request.start_time,
+                "end_time": request.end_time,
+                "topic": request.topic
+            }
+        }
+
     except Exception as e:
         db.rollback()
-        logger.error(f"Error saving availability: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error saving slots")
-
-    return {
-        "response_code": "1",
-        "detail": get_text("availability_saved", lang),
-        "data": {
-            "tutor_id": str(current_user.id),
-            "availability_date": str(item.availability_date),
-            "start_time": str(item.start_time),
-            "end_time": str(item.end_time),
-            "topic": str(item.topic)
-        }
-    }
+        logger.error(f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
