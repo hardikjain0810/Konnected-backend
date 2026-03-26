@@ -181,11 +181,11 @@ async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tutor not found")
 
     # Fetch the next 3 available slots from the Slots table
-    upcoming_slots = db.query(AvailabilityRule).\
+    upcoming_slots = db.query(TutorSlot).\
         filter(
-            AvailabilityRule.tutor_id == tutor_id,
-            AvailabilityRule.start_time > datetime.now(timezone.utc),
-            AvailabilityRule.is_booked == open
+            TutorSlot.tutor_id == tutor_id,
+            TutorSlot.start_time > datetime.now(timezone.utc),
+            TutorSlot.is_booked == open
         ).\
         order_by(asc(AvailabilityRule.start_time)).\
         limit(3).all()
