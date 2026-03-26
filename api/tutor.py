@@ -205,7 +205,7 @@ async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
         "languages_spoken":profile.languages_spoken,
         "topics": profile.topics,
         "bio": profile.bio,
-        "upcoming_slots": formatted_slots
+        "formated_slots": formatted_slots
     }
 
     return {
