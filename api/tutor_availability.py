@@ -41,6 +41,11 @@ def set_availability(
                 status_code=400,
                 detail=f"Invalid time range for {item.availability_date}"
             )
+        if item.availability_date < datetime.now():
+            raise HTTPException(
+                status_code=401,
+                detail=f"Invalid date {item.availability_date}"
+            )
 
         # Save the Rule
         new_rule = AvailabilityRule(
