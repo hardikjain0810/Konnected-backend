@@ -145,7 +145,8 @@ def get_home_tutors(
 ):
     # 1. Get student's target language
     student = db.query(Profile).filter(Profile.user_id == current_user.id).first()
-    logger.info(f"Student : {student.user_id}")
+    if student is None:
+        raise HTTPException(status_code=401, detail="Only students can access this page.")
     # 2. Query Tutors (Filtering by is_published and Language)
     tutors = db.query(TutorProfile,TutorProfile.name).filter(
         TutorProfile.is_published == True,
