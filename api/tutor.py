@@ -143,11 +143,11 @@ def get_home_tutors(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    # 1. Get student's target language
+    # Get student's target language
     student = db.query(Profile).filter(Profile.user_id == current_user.id).first()
     if student is None:
         raise HTTPException(status_code=401, detail="User doesn't exist.")
-    # 2. Query Tutors (Filtering by is_published and Language)
+    # Query Tutors (Filtering by is_published and Language)
     tutors = db.query(TutorProfile,TutorProfile.name).filter(
         TutorProfile.is_published == True,
         TutorProfile.languages_taught == student.primary_language.value 
