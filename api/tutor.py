@@ -105,11 +105,13 @@ async def update_tutor_profile(
         logger.warning(f"Tutor profile not found for user: {current_user.email}")
         raise HTTPException(status_code=404, detail=get_text("profile_not_found", lang))
 
+    tutor_profile.name = request.name
     tutor_profile.headline = request.headline
     tutor_profile.bio = request.bio
-    tutor_profile.languages_taught = [l.value for l in request.languages_taught]
-    tutor_profile.languages_spoken = [l.value for l in request.languages_spoken]
+    tutor_profile.languages_taught = request.languages_taught
+    tutor_profile.languages_spoken = request.languages_spoken
     tutor_profile.topics = [t.value for t in request.topics]
+    tutor_profile.is_published = request.is_published
 
     try:
         db.commit()
@@ -125,6 +127,7 @@ async def update_tutor_profile(
         "detail": get_text("profile_update_success", lang),
         "data": {
             "user_id": str(tutor_profile.user_id),
+            "name" : tutor_profile.name,
             "headline": tutor_profile.headline,
             "bio": tutor_profile.bio,
             "languages_taught": tutor_profile.languages_taught,
