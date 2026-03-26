@@ -100,6 +100,7 @@ class AvailabilityResponse(BaseModel):
     data: Optional[AvailabilityRuleData] = None
 
 class TutorRecommendation(BaseModel):
+    id: str
     display_name: str
     teaches_languages: str  # e.g., ["Korean", "English"]
     topics: List[str]            # e.g., ["Conversation", "Culture"]
