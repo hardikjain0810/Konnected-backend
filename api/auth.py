@@ -123,9 +123,23 @@ async def verify(request: VerifyOTPRequest, response: Response, req: Request, db
     
     token = create_access_token(data={"sub": str(user.id), "email": user.email})
     logger.info(f"User verified and token generated for email: {session_email}")
+
+    user_role = db.query(UserRole).filter(UserRole.user_id == user.id).first()
+    if not user_role:
+        raise HTTPException(status_code=404, detail="User role not assigned.")
+    
+    tutor_id = None
+    student_id = None
+
+    if user_role.role == RoleType.tutor: 
+        tutor_id = user.id
+    else:
+        student_id = user.id
     
     return {
         "response_code": "1",
         "detail": get_text("verify_success", lang),
-        "data": {"access_token": token, "token_type": "bearer"}
+        "tutor_id": tutor_id,
+        "student_id": student_id,
+        "token": token
     }

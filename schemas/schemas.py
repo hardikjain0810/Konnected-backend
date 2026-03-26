@@ -33,8 +33,11 @@ class VerifyOTPRequest(BaseModel):
     otp: str = Field(..., min_length=6, max_length=6)
 
 class TokenData(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+    response_code: str = "1"
+    detail: str
+    tutor_id: Optional[UUID] = None
+    student_id: Optional[UUID] = None
+    token: str 
 
 class TokenResponse(BaseResponse):
     data: Optional[TokenData] = None
