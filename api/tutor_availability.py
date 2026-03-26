@@ -21,7 +21,7 @@ def set_availability(
 ):
     lang = get_lang(req)
     
-    # 1. Role Validation: Ensure user is a tutor
+    #Role Validation: Ensure user is a tutor
     role = db.query(UserRole).filter(
         UserRole.user_id == current_user.id,
         UserRole.role == RoleType.tutor
@@ -31,21 +31,35 @@ def set_availability(
         logger.warning(f"Non-tutor tried to set availability: {current_user.id}")
         raise HTTPException(status_code=403, detail="Only tutors can set availability")
 
-    # 2. Clear existing rules for this tutor (Update behavior)
+    # Clear existing rules for this tutor
     db.query(AvailabilityRule).filter(AvailabilityRule.tutor_id == current_user.id).delete()
 
-    # 3. Process Rules and Generate Slots
+    # Process Rules and Generate Slots
     for item in request.availability:
         if item.start_time >= item.end_time:
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid time range for {item.availability_date}"
             )
-        if item.availability_date < datetime.now():
+        
+        today = date.today()
+        
+        # Check if the date is in the past
+        if item.availability_date < today:
+            logger.warning(f"Tutor tried to set past date: {item.availability_date}")
             raise HTTPException(
-                status_code=401,
-                detail=f"Invalid date {item.availability_date}"
+                status_code=400, # Use 400 for Bad Request
+                detail=f"Cannot set availability for a past date: {item.availability_date}"
             )
+
+        # If it's today, ensure the start_time hasn't already passed
+        if item.availability_date == today:
+            current_time = datetime.now().time()
+            if item.start_time <= current_time:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Start time must be in the future for today's slots"
+                )
 
         # Save the Rule
         new_rule = AvailabilityRule(
