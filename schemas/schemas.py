@@ -110,3 +110,19 @@ class TutorRecommendation(BaseModel):
 class MarketplaceResponse(BaseModel):
     tutors: List[TutorRecommendation]   
 
+class SlotSchema(BaseModel):
+    slot_date: date
+    start_time: time
+
+class TutorDetailData(BaseModel):
+    name: str
+    languages_taught: str
+    languages_speak: str    
+    topics: List[str]
+    bio: str
+    upcoming_slots: List[SlotSchema]
+
+
+class TutorDetailResponse(BaseModel):
+    data: Optional[TutorDetailData] = None
+

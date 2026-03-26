@@ -1,17 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.database_models import User, TutorProfile, Language, TutorTopic, RoleType, UserRole, TutorSlot, Booking,BookingStatus, Profile
-from schemas.schemas import TutorProfileCreate, TutorProfileResponse, TutorProfileData, MarketplaceResponse
-from datetime import timedelta, datetime
+from models.database_models import User, TutorProfile, Language, TutorTopic, RoleType, UserRole, TutorSlot, Booking,AvailabilityRule, Profile
+from schemas.schemas import TutorProfileCreate, TutorProfileResponse, TutorDetailResponse, MarketplaceResponse
+from datetime import timezone, datetime
 from core.utils import get_lang
 from core.auth import get_current_user
 from core.logging_config import logger
 from core.translations import get_text
 from core.exceptions import init_exception_handlers
 from typing import List
-from sqlalchemy import and_
-from uuid import uuid4
+from sqlalchemy import and_, asc
+from uuid import uuid4, UUID
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
 
@@ -146,7 +146,7 @@ def get_home_tutors(
     # 1. Get student's target language
     student = db.query(Profile).filter(Profile.user_id == current_user.id).first()
     if student is None:
-        raise HTTPException(status_code=401, detail="Only students can access this page.")
+        raise HTTPException(status_code=401, detail="User doesn't exist.")
     # 2. Query Tutors (Filtering by is_published and Language)
     tutors = db.query(TutorProfile,TutorProfile.name).filter(
         TutorProfile.is_published == True,
@@ -171,3 +171,32 @@ def get_home_tutors(
 
     return {"tutors": results}
 
+@router.get("/{tutor_id}", response_model=TutorDetailResponse)
+async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
+    # Fetch only from TutorProfile
+    profile = db.query(TutorProfile).filter(TutorProfile.user_id == tutor_id).first()
+
+    if not profile:
+        logger.warning(f"Tutor Profile not found for ID: {tutor_id}")
+        raise HTTPException(status_code=404, detail="Tutor not found")
+
+    # Fetch the next 3 available slots from the Slots table
+    upcoming_slots = db.query(AvailabilityRule).\
+        filter(
+            AvailabilityRule.tutor_id == tutor_id,
+            AvailabilityRule.start_time > datetime.now(timezone.utc),
+            AvailabilityRule.is_booked == False
+        ).\
+        order_by(asc(AvailabilityRule.start_time)).\
+        limit(3).all()
+
+    # Construct Response using data only from 'profile'
+    return {
+        "tutor_id": profile.user_id,
+        "name": profile.full_name,
+        "languages_taught":profile.languages_taught,
+        "languages_spoken":profile.languages_spoken,
+        "topics": profile.topics,
+        "bio": profile.bio,
+        "upcoming_slots": upcoming_slots
+    }
