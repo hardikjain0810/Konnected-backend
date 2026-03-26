@@ -124,5 +124,5 @@ class TutorDetailData(BaseModel):
 
 
 class TutorDetailResponse(BaseModel):
-    data: Optional[TutorDetailData] = None
+    detail: Optional[TutorDetailData] = None
 
