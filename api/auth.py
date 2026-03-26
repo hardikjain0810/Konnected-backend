@@ -139,7 +139,9 @@ async def verify(request: VerifyOTPRequest, response: Response, req: Request, db
     return {
         "response_code": "1",
         "detail": get_text("verify_success", lang),
-        "tutor_id": tutor_id,
-        "student_id": student_id,
-        "token": token
+        "data":{
+            "tutor_id": tutor_id,
+            "student_id": student_id,
+            "token": token
+        }
     }
