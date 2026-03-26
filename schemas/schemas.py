@@ -115,7 +115,6 @@ class SlotSchema(BaseModel):
     start_time: time
 
 class TutorDetailData(BaseModel):
-    tutor_id: str[UUID]
     name: str
     languages_taught: str
     languages_spoken: str    
