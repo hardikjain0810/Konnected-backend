@@ -164,6 +164,7 @@ def get_home_tutors(
         ).order_by(TutorSlot.start_at.asc()).first()
 
         results.append({
+            "id" : profile.user_id,
             "display_name": profile.name,
             "teaches_languages": profile.languages_taught,
             "topics": profile.topics,
