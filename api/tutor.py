@@ -181,7 +181,7 @@ async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tutor not found")
 
     # Fetch the next 3 available slots from the Slots table
-    upcoming_slots = db.query(TutorSlot).\
+    raw_slots = db.query(TutorSlot).\
         filter(
             TutorSlot.tutor_id == tutor_id,
             TutorSlot.start_at > datetime.now(timezone.utc),
@@ -189,14 +189,27 @@ async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
         ).\
         order_by(asc(TutorSlot.start_at)).\
         limit(3).all()
+    
+    formatted_slots = [
+    {
+        "slot_date": slot.start_at.date(), 
+        "start_time": slot.start_at.time()
+    } 
+    for slot in raw_slots
+]
 
-    # Construct Response using data only from 'profile'
-    return {
+    tutor_data =  {
         "tutor_id": profile.user_id,
         "name": profile.name,
         "languages_taught":profile.languages_taught,
         "languages_spoken":profile.languages_spoken,
         "topics": profile.topics,
         "bio": profile.bio,
-        "upcoming_slots": upcoming_slots
+        "upcoming_slots": formatted_slots
+    }
+
+    return {
+        "response_code":"1",
+        "detail":"Profile for specific tutor id",
+        "data":tutor_data
     }

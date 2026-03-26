@@ -117,12 +117,12 @@ class SlotSchema(BaseModel):
 class TutorDetailData(BaseModel):
     name: str
     languages_taught: str
-    languages_speak: str    
+    languages_spoken: str    
     topics: List[str]
     bio: str
-    upcoming_slots: List[SlotSchema]
+    formated_slots: List[SlotSchema]
 
 
 class TutorDetailResponse(BaseModel):
-    detail: Optional[TutorDetailData] = None
+    data: Optional[TutorDetailData] = None
 
