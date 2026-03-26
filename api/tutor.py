@@ -184,10 +184,10 @@ async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
     upcoming_slots = db.query(TutorSlot).\
         filter(
             TutorSlot.tutor_id == tutor_id,
-            TutorSlot.start_time > datetime.now(timezone.utc),
+            TutorSlot.start_at > datetime.now(timezone.utc),
             TutorSlot.is_booked == open
         ).\
-        order_by(asc(AvailabilityRule.start_time)).\
+        order_by(asc(TutorSlot.start_at)).\
         limit(3).all()
 
     # Construct Response using data only from 'profile'
