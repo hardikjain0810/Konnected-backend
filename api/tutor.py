@@ -193,7 +193,7 @@ async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
     # Construct Response using data only from 'profile'
     return {
         "tutor_id": profile.user_id,
-        "name": profile.full_name,
+        "name": profile.name,
         "languages_taught":profile.languages_taught,
         "languages_spoken":profile.languages_spoken,
         "topics": profile.topics,
