@@ -185,7 +185,7 @@ async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
         filter(
             TutorSlot.tutor_id == tutor_id,
             TutorSlot.start_at > datetime.now(timezone.utc),
-            TutorSlot.is_booked == open
+            TutorSlot.status == open
         ).\
         order_by(asc(TutorSlot.start_at)).\
         limit(3).all()
