@@ -55,7 +55,7 @@ async def create_tutor_profile(
         bio=request.bio,
         languages_taught=request.languages_taught,
         languages_spoken=request.languages_spoken,
-        topics=[t.value for t in request.topics],
+        topics=[t.strip() for t in request.topics],
         is_published=request.is_published
     )
     db.add(tutor_profile)

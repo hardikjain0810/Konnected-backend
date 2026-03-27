@@ -67,7 +67,7 @@ class TutorProfileCreate(BaseModel):
     bio: str = Field(..., min_length=5, max_length=500)
     languages_taught: str
     languages_spoken: str
-    topics: List[TutorTopic]
+    topics: List[str]
     is_published: bool
 
 class TutorProfileData(BaseModel):
@@ -77,7 +77,7 @@ class TutorProfileData(BaseModel):
     bio: str
     languages_taught: str
     languages_spoken: str
-    topics: List[TutorTopic]
+    topics: List[str]
     is_published: bool
 
 class TutorProfileResponse(BaseResponse):
@@ -114,7 +114,7 @@ class TutorDataWrapper(BaseModel):
 class MarketplaceResponse(BaseResponse):
     response_code: str
     detail: str
-    data: TutorDataWrapper  
+    data: TutorDataWrapper   
 
 class SlotSchema(BaseModel):
     slot_date: date
