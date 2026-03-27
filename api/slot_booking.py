@@ -6,72 +6,85 @@ from core.utils import get_lang
 from core.auth import get_current_user
 from db.database import get_db
 from core.translations import get_text
-from models.database_models import TutorSlot, SlotStatus, RoleType
-from schemas.schemas import SlotBookingCreate, SlotBookingResponse
+from models.database_models import TutorSlot, SlotStatus, BookingStatus, Booking
+from schemas.schemas import SlotBookingCreate
+from uuid import uuid
+from core.auth import get_current_user
 
 router = APIRouter(prefix="", tags=["tutor"])
 logger = get_logger()
 
-@router.post("/book", response_model=SlotBookingResponse)
-async def book_slot(
-    request: SlotBookingCreate, 
-    db: Session = Depends(get_db), 
-    current_user = Depends(get_current_user)
-):
-    # Fetch the slot and check if it's available
-    slot = db.query(TutorSlot).filter(
-        TutorSlot.id == request.slot_id,
-        TutorSlot.status == "open" # Ensure it is still open
-    ).first()
-
-    if not slot:
+@router.post("/book", status_code=status.HTTP_201_CREATED)
+def create_booking(request: SlotBookingCreate, 
+                   db: Session = Depends(get_db), 
+                   current_user = Depends(get_current_user)):
+    now = datetime.now()
+    
+    # Validation: Is the requested time in the future?
+    if request.start_at <= now:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="Slot is either already booked or does not exist."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot book a slot in the past."
         )
 
-    # Prevent users from booking their own slots
-    if slot.tutor_id == current_user.id:
+    # Database Lookup with Row Locking
+    # This prevents race conditions where two students book the same slot
+    requested_slot = db.query(TutorSlot).filter(
+        TutorSlot.tutor_id == request.tutor_id,
+        TutorSlot.start_at == request.start_at,
+        TutorSlot.status == SlotStatus.open
+    ).with_for_update().first()
+
+    # Suggestion Logic (If exact slot is missing or taken)
+    if not requested_slot:
+        nearest_slot = db.query(TutorSlot).filter(
+            TutorSlot.tutor_id == request.tutor_id,
+            TutorSlot.status == SlotStatus.open,
+            TutorSlot.start_at > request.start_at
+        ).order_by(TutorSlot.start_at.asc()).first()
+
         raise HTTPException(
-            status_code=400, 
-            detail="You cannot book your own tutoring slot."
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Slot unavailable",
+                "suggested_time": nearest_slot.start_at if nearest_slot else None,
+                "message": "The requested slot is taken. " + 
+                           (f"Next available: {nearest_slot.start_at}" if nearest_slot else "No other slots.")
+            }
         )
 
+    # Atomic Transaction: Create Booking & Update Slot
     try:
-        # Create the Booking Record
+        # Create the Booking record with 'scheduled' status
         new_booking = Booking(
             id=uuid.uuid4(),
-            tutor_id=slot.tutor_id,
+            tutor_id=request.tutor_id,
             student_id=current_user.id,
-            slot_id=slot.id,
-            status=BookingStatus.confirmed, # Or pending, depending on your flow
-            goal=request.goal,
-            note=request.note,
-            starts_at=slot.start_at,
-            ends_at=slot.end_at
+            slot_id=requested_slot.id,
+            status=BookingStatus.scheduled, # Updated to use your Enum
+            goal=request.topic,
+            starts_at=requested_slot.start_at,
+            ends_at=requested_slot.end_at
         )
         
-        # Update the Slot Status to 'booked'
-        slot.status = "booked"
+        # Mark the Slot as closed/booked so it disappears from search
+        requested_slot.status = SlotStatus.booked # Assuming SlotStatus.booked exists
         
         db.add(new_booking)
-        db.commit()
+        db.commit() # Save both changes at once
         db.refresh(new_booking)
-
+        
         return {
-            "response_code": "1",
-            "detail": "Slot booked successfully!",
-            "data": {
-                "booking_id": new_booking.id,
-                "tutor_id": new_booking.tutor_id,
-                "slot_id": new_booking.slot_id,
-                "starts_at": new_booking.starts_at,
-                "ends_at": new_booking.ends_at,
-                "status": "confirmed"
-            }
+            "status": "success",
+            "booking_id": new_booking.id,
+            "booking_status": new_booking.status,
+            "scheduled_for": new_booking.starts_at
         }
-
+        
     except Exception as e:
-        db.rollback()
-        logger.error(f"Booking failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="An error occurred while processing your booking.")
+        db.rollback() # Undo changes if anything fails (e.g., DB connection drop)
+        print(f"Error during booking: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while processing booking."
+        )

@@ -127,8 +127,10 @@ class TutorDetailResponse(BaseModel):
     data: Optional[TutorDetailData] = None
 
 class SlotBookingCreate(BaseModel):
-    slot_id: UUID
-    goal: str
+    tutor_id: UUID
+    slot_date: date
+    start_time: time
+    topic: str
 
 class SlotBookingData(BaseModel):
     booking_id: UUID

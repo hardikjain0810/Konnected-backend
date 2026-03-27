@@ -1,7 +1,7 @@
 import uuid
 import enum
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, DateTime, Enum, CheckConstraint, UniqueConstraint, Time, Date
+from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, DateTime, Enum, CheckConstraint, UniqueConstraint, Time, Date, Index
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import declarative_base
 
@@ -129,6 +129,7 @@ class AvailabilityRule(Base):
     topic = Column(String)
 
 
+
 class TutorSlot(Base):
     __tablename__ = "tutor_slots"
 
@@ -140,8 +141,8 @@ class TutorSlot(Base):
 
     __table_args__ = (
         UniqueConstraint("tutor_id", "start_at"),
+        Index("idx_tutor_status_start", "tutor_id", "status", "start_at")
     )
-
 
 class Booking(Base):
     __tablename__ = "bookings"
@@ -159,7 +160,7 @@ class Booking(Base):
 
     __table_args__ = (
         CheckConstraint("ends_at > starts_at"),
-        CheckConstraint("tutor_id <> student_id"),
+        CheckConstraint("tutor_id <> student_id")        
     )
 
 
