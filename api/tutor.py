@@ -110,7 +110,7 @@ async def update_tutor_profile(
     tutor_profile.bio = request.bio
     tutor_profile.languages_taught = request.languages_taught
     tutor_profile.languages_spoken = request.languages_spoken
-    tutor_profile.topics = [t.value for t in request.topics]
+    tutor_profile.topics = [t.strip() for t in request.topics]
     tutor_profile.is_published = request.is_published
 
     try:
