@@ -49,7 +49,7 @@ def create_booking(request: SlotBookingCreate,
             status_code=status.HTTP_409_CONFLICT,
             detail={
                 "error": "Slot unavailable",
-                "suggested_time": nearest_slot.start_at if nearest_slot else None,
+                "suggested_time": nearest_slot.start_at.isoformat() if nearest_slot else None,
                 "message": "The requested slot is taken. " + 
                            (f"Next available: {nearest_slot.start_at}" if nearest_slot else "No other slots.")
             }
