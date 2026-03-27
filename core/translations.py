@@ -23,7 +23,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "auth_failed": "Could not validate credentials",
         "token_expired": "Token has expired",
         "not_a_tutor": "Access denied. You are not a tutor.",
-        "availability_saved": "Availability saved successfully"
+        "availability_saved": "Availability saved successfully",
+        "book_slot_in_past": "Cannot book a slot in the past."
     },
     "ko": {
         "user_exists": "이미 존재하는 사용자입니다. 로그인해 주세요.",

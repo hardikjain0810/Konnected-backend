@@ -1,17 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from db.database import get_db
 from models.database_models import User, Country, UserRole, RoleType
-from schemas.schemas import SignupRequest, LoginRequest, VerifyOTPRequest, TokenResponse, BaseResponse, TokenData
+from schemas.schemas import SignupRequest, LoginRequest, VerifyOTPRequest, TokenResponse, BaseResponse
 from core.utils import validate_email_eligibility, check_age_eligibility, generate_otp, get_lang
 from db.redis import redis_client
 from core.auth import create_access_token
 from datetime import datetime,timezone
 from core.logging_config import logger
 from core.translations import get_text
-from core.exceptions import init_exception_handlers
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Response, Cookie
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, Cookie
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -142,6 +140,7 @@ async def verify(request: VerifyOTPRequest, response: Response, req: Request, db
         "data":{
             "tutor_id": tutor_id,
             "student_id": student_id,
-            "token": token
+            "access_token": token,
+            "token_type":"Bearer token"
         }
     }

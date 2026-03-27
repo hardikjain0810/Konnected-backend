@@ -1,37 +1,39 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, time, date
+from datetime import datetime
 from core.logging_config import get_logger
 from core.utils import get_lang
 from core.auth import get_current_user
 from db.database import get_db
 from core.translations import get_text
 from models.database_models import TutorSlot, SlotStatus, BookingStatus, Booking
-from schemas.schemas import SlotBookingCreate
+from schemas.schemas import SlotBookingCreate, SlotBookingResponse
 from uuid import uuid
 from core.auth import get_current_user
 
 router = APIRouter(prefix="", tags=["tutor"])
 logger = get_logger()
 
-@router.post("/book", status_code=status.HTTP_201_CREATED)
+@router.post("/book", status_code=status.HTTP_201_CREATED, response_model=SlotBookingResponse)
 def create_booking(request: SlotBookingCreate, 
+                   req: Request,
                    db: Session = Depends(get_db), 
                    current_user = Depends(get_current_user)):
+    lang = get_lang(req)
     now = datetime.now()
-    
+    start_at = datetime.combine(request.slot_date,request.start_time)
     # Validation: Is the requested time in the future?
-    if request.start_at <= now:
+    if start_at <= now:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot book a slot in the past."
+            detail=get_text("book_slot_in_past",lang)
         )
 
     # Database Lookup with Row Locking
     # This prevents race conditions where two students book the same slot
     requested_slot = db.query(TutorSlot).filter(
         TutorSlot.tutor_id == request.tutor_id,
-        TutorSlot.start_at == request.start_at,
+        TutorSlot.start_at == start_at,
         TutorSlot.status == SlotStatus.open
     ).with_for_update().first()
 
@@ -40,7 +42,7 @@ def create_booking(request: SlotBookingCreate,
         nearest_slot = db.query(TutorSlot).filter(
             TutorSlot.tutor_id == request.tutor_id,
             TutorSlot.status == SlotStatus.open,
-            TutorSlot.start_at > request.start_at
+            TutorSlot.start_at > start_at
         ).order_by(TutorSlot.start_at.asc()).first()
 
         raise HTTPException(
