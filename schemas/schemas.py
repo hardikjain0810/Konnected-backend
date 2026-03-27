@@ -109,7 +109,7 @@ class TutorRecommendation(BaseModel):
     next_slot: Optional[datetime] = None
     
 class MarketplaceResponse(BaseResponse):
-    tutors: List[TutorRecommendation]   
+    data: List[TutorRecommendation]   
 
 class SlotSchema(BaseModel):
     slot_date: date

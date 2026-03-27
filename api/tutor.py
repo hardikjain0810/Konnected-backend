@@ -174,7 +174,7 @@ def get_home_tutors(
     return {
         "response_code":"1",
         "detail":"Recommended tutors",
-        "tutors": results
+        "data":{"tutors": results}
         }
 
 @router.get("/{tutor_id}", response_model=TutorDetailResponse)
