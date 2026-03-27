@@ -7,6 +7,7 @@ from api.user_profile import router as profile_router
 from api.tutor import router as tutor_router
 from api.tutor_availability import router as tutor_availability
 from api.slot_booking import router as slot_booking
+from api.get_tutor_topics import router as get_tutor_topics
 from db.database import engine
 from models.database_models import Base
 from core.logging_config import logger
@@ -32,6 +33,7 @@ app.include_router(profile_router)
 app.include_router(tutor_router)
 app.include_router(tutor_availability)
 app.include_router(slot_booking)
+app.include_router(get_tutor_topics)
 
 @app.get("/")
 async def root():
