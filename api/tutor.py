@@ -171,7 +171,13 @@ def get_home_tutors(
             "next_slot": next_val[0] if next_val else None
         })
 
-    return {"tutors": results}
+    return {
+        "response_code":"1",
+        "detail":"Recommended tutors",
+        "data":{
+            "tutors": results
+        }
+        }
 
 @router.get("/{tutor_id}", response_model=TutorDetailResponse)
 async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):

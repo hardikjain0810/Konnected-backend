@@ -108,7 +108,7 @@ class TutorRecommendation(BaseModel):
     topics: List[str]        
     next_slot: Optional[datetime] = None
     
-class MarketplaceResponse(BaseModel):
+class MarketplaceResponse(BaseResponse):
     tutors: List[TutorRecommendation]   
 
 class SlotSchema(BaseModel):
