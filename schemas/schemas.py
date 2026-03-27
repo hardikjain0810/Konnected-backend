@@ -107,9 +107,14 @@ class TutorRecommendation(BaseModel):
     teaches_languages: str  
     topics: List[str]        
     next_slot: Optional[datetime] = None
+
+class TutorDataWrapper(BaseModel):
+    tutors: List[TutorRecommendation]
     
 class MarketplaceResponse(BaseResponse):
-    data: List[TutorRecommendation]   
+    response_code: str
+    detail: str
+    data: TutorDataWrapper  
 
 class SlotSchema(BaseModel):
     slot_date: date
