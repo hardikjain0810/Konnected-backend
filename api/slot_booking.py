@@ -10,6 +10,7 @@ from models.database_models import TutorSlot, SlotStatus, BookingStatus, Booking
 from schemas.schemas import SlotBookingCreate, SlotBookingResponse
 import uuid
 from core.auth import get_current_user
+from fastapi.encoders import jsonable_encoder
 
 router = APIRouter(prefix="", tags=["tutor"])
 logger = get_logger()
@@ -45,14 +46,14 @@ def create_booking(request: SlotBookingCreate,
             TutorSlot.start_at > start_at
         ).order_by(TutorSlot.start_at.asc()).first()
 
+        error_details = {
+            "error": "Slot unavailable",
+            "suggested_time": nearest_slot.start_at if nearest_slot else None,
+            "message": f"The requested slot is taken. Next available: {nearest_slot.start_at}" if nearest_slot else "No other slots."
+        }
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "error": "Slot unavailable",
-                "suggested_time": nearest_slot.start_at.isoformat() if nearest_slot else None,
-                "message": "The requested slot is taken. " + 
-                           (f"Next available: {nearest_slot.start_at}" if nearest_slot else "No other slots.")
-            }
+            detail=jsonable_encoder(error_details)
         )
 
     # Atomic Transaction: Create Booking & Update Slot

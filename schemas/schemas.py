@@ -151,3 +151,10 @@ class SlotBookingResponse(BaseModel):
     detail: str
     data: Optional[SlotBookingData] = None
 
+class TutorTopicRequest(BaseModel):
+    tutor_id: UUID
+
+class TutorTopicResponse(BaseModel):
+    response_code: str = "1"
+    detail: str
+    topics: List[str]
