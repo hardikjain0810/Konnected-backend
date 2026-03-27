@@ -77,12 +77,16 @@ def create_booking(request: SlotBookingCreate,
         db.refresh(new_booking)
         
         return {
-            "booking_id": new_booking.id,
-            "tutor_id": new_booking.tutor_id,
-            "slot_id": new_booking.slot_id,
-            "starts_at": new_booking.starts_at,
-            "ends_at": new_booking.ends_at,
-            "status": new_booking.status,
+            "response_code": "1",
+            "detail":"Slot booked successfully",
+            "data":{
+                "booking_id": new_booking.id,
+                "tutor_id": new_booking.tutor_id,
+                "slot_id": new_booking.slot_id,
+                "starts_at": new_booking.starts_at,
+                "ends_at": new_booking.ends_at,
+                "status": new_booking.status,
+            }
         }
         
     except Exception as e:
