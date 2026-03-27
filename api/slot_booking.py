@@ -8,7 +8,7 @@ from db.database import get_db
 from core.translations import get_text
 from models.database_models import TutorSlot, SlotStatus, BookingStatus, Booking
 from schemas.schemas import SlotBookingCreate, SlotBookingResponse
-from uuid import uuid
+import uuid
 from core.auth import get_current_user
 
 router = APIRouter(prefix="", tags=["tutor"])
