@@ -116,49 +116,49 @@ def get_student_sessions(
     
     if not request.student_id:
         raise HTTPException(
-            status_code=401,
+            status_code=400,
             detail="User not authenticated or ID is missing"
         )
-        try:
-            from uuid import UUID
-            student_id = request.student_id
-            if isinstance(student_id, str):
-                student_id = UUID(student_id)
-            results = db.query(
-                TutorSlot,
-                Profile.display_name.label("tutor_name")
-            ).join(
-                Booking, TutorSlot.id == Booking.slot_id
-            ).outerjoin(
-                Profile, Booking.tutor_id == Profile.user_id
-            ).filter(
-                Booking.student_id == student_id) \
-            .all()
+    try:
+        from uuid import UUID
+        student_id = request.student_id
+        if isinstance(student_id, str):
+            student_id = UUID(student_id)
+        results = db.query(
+            TutorSlot,
+            Profile.display_name.label("tutor_name")
+        ).join(
+            Booking, TutorSlot.id == Booking.slot_id
+        ).outerjoin(
+            Profile, Booking.tutor_id == Profile.user_id
+        ).filter(
+            Booking.student_id == student_id) \
+        .all()
 
-            session_list = []
-            for slot, tutor_name in results:
-                session_list.append({
-                    "slot_id": str(slot.id),
-                    "tutor_name": tutor_name,
-                    "start_date": slot.starts_at.date().isoformat(),
-                    "start_time": slot.starts_at.time().strftime("%H:%M"),
-                    "end_time": slot.ends_at.time().strftime("%H:%M"),
-                    "status": str(slot.status)
-                })
+        session_list = []
+        for slot, tutor_name in results:
+            session_list.append({
+                "slot_id": str(slot.id),
+                "tutor_name": tutor_name,
+                "start_date": slot.starts_at.date().isoformat(),
+                "start_time": slot.starts_at.time().strftime("%H:%M"),
+                "end_time": slot.ends_at.time().strftime("%H:%M"),
+                "status": str(slot.status)
+            })
 
-            return {
-                "response_code": "1",
-                "detail": "Retrieved booked sessions successfully",
-                "data": session_list
-            }
+        return {
+            "response_code": "1",
+            "detail": "Retrieved booked sessions successfully",
+            "data": session_list
+        }
 
-        except Exception as e:
-            logger.error(f"Error in get_student_sessions: {str(e)}")
-            raise HTTPException(
-                status_code=500, 
-                detail={
-                "response_code": "0",
-                "error": f"Internal Server Error: {str(e)}",
-                "data": []
-            }
-            )
+    except Exception as e:
+        logger.error(f"Error in get_student_sessions: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail={
+            "response_code": "0",
+            "error": f"Internal Server Error: {str(e)}",
+            "data": []
+        }
+        )
