@@ -127,7 +127,7 @@ def get_student_sessions(
             Booking.tutor_id == Profile.user_id
         ).filter(
             Booking.student_id == request.student_id
-        ).order_by(TutorSlot.starts_at.asc()).all()
+        ).order_by(TutorSlot.start_at.asc()).all()
 
         session_list = []
         for slot, tutor_name in results:
