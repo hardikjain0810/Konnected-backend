@@ -124,7 +124,7 @@ def get_student_sessions(
             TutorSlot.id == Booking.slot_id # Bridge to the specific slot
         ).join(
             Profile, 
-            TutorSlot.tutor_id == Profile.id # Link slot to the specific tutor
+            TutorSlot.tutor_id == Profile.user_id # Link slot to the specific tutor
         ).filter(
             Booking.student_id == request.student_id
         ).distinct().all() # Use distinct() to prevent duplicate rows if needed
