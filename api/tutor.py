@@ -176,6 +176,39 @@ def get_home_tutors(
         "data":{"tutors": results}
         }
 
+@router.get("/bookings",response_model=GetTutorAvailabilityResponse)
+async def get_tutor_bookings(request: GetTutorAvailability,
+                             db: Session = Depends(get_db)):
+    try:
+        query = db.query(
+            TutorSlot, 
+            AvailabilityRule.topic
+        ).join(
+            AvailabilityRule, 
+            (TutorSlot.tutor_id == AvailabilityRule.tutor_id) & 
+            (func.date(TutorSlot.start_at) == AvailabilityRule.date)
+        ).filter(
+            TutorSlot.tutor_id == request.tutor_id,
+        )
+
+        if request.availability_date:
+            query = query.filter(func.date(TutorSlot.start_at) == request.availability_date)
+
+        results = query.order_by(TutorSlot.start_at.asc()).all()
+
+        slot_list = []
+        for slot, topic in results:
+            slot_list.append({
+                "tutor_id": str(slot.tutor_id),
+                "date": slot.start_at.date().isoformat(),
+                "start_time": slot.start_at.time().strftime("%H:%M"),
+                "end_time": slot.end_at.time().strftime("%H:%M"),
+                "topics": topic 
+            })
+    except Exception as e:
+        logger.error({"error":str(e)})
+        raise HTTPException(status_code=500, detail={"error":str(e)}) 
+
 @router.get("/{tutor_id}", response_model=TutorDetailResponse)
 async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
     # Fetch only from TutorProfile
@@ -219,35 +252,3 @@ async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
         "data":tutor_data
     }
 
-@router.get("/bookings",response_model=GetTutorAvailabilityResponse)
-async def get_tutor_bookings(request: GetTutorAvailability,
-                             db: Session = Depends(get_db)):
-    try:
-        query = db.query(
-            TutorSlot, 
-            AvailabilityRule.topic
-        ).join(
-            AvailabilityRule, 
-            (TutorSlot.tutor_id == AvailabilityRule.tutor_id) & 
-            (func.date(TutorSlot.start_at) == AvailabilityRule.date)
-        ).filter(
-            TutorSlot.tutor_id == request.tutor_id,
-        )
-
-        if request.availability_date:
-            query = query.filter(func.date(TutorSlot.start_at) == request.availability_date)
-
-        results = query.order_by(TutorSlot.start_at.asc()).all()
-
-        slot_list = []
-        for slot, topic in results:
-            slot_list.append({
-                "tutor_id": str(slot.tutor_id),
-                "date": slot.start_at.date().isoformat(),
-                "start_time": slot.start_at.time().strftime("%H:%M"),
-                "end_time": slot.end_at.time().strftime("%H:%M"),
-                "topics": topic 
-            })
-    except Exception as e:
-        logger.error({"error":str(e)})
-        raise HTTPException(status_code=500, detail={"error":str(e)}) 
