@@ -16,7 +16,6 @@ logger = get_logger()
 def set_availability(
     request: AvailabilityRuleCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
 ):
     # Date Range Validation (The 21-Day Rule)
     today = date.today()
@@ -97,5 +96,5 @@ def set_availability(
 
     except Exception as e:
         db.rollback()
-        logger.error(f"Error: {str(e)}")
-        raise HTTPException(status_code=500, detail={str(e)})
+        logger.error({"error":str(e)})
+        raise HTTPException(status_code=500, detail={"error":str(e)})
