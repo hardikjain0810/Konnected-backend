@@ -189,9 +189,10 @@ async def get_tutor_bookings(request: GetTutorAvailability,
             (func.date(TutorSlot.start_at) == AvailabilityRule.date)
         ).filter(
             TutorSlot.tutor_id == request.tutor_id,
+            TutorSlot.status == "booked"
         )
 
-        if request.availability_date:
+        if request.availability_date and str(request.availability_date).strip() != "":
             query = query.filter(func.date(TutorSlot.start_at) == request.availability_date)
 
         results = query.order_by(TutorSlot.start_at.asc()).all()
