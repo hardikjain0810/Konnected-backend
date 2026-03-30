@@ -13,6 +13,7 @@ logger = get_logger()
 
 @router.put("/slots/{slot_id}/cancel",response_model=CancelSlotResponse)
 def cancel_and_reopen_slot(
+    slot_id: UUID,
     request: CancelSlotCreate,
     db: Session = Depends(get_db)):
     
@@ -41,7 +42,7 @@ def cancel_and_reopen_slot(
             )
 
         # Validation: Only cancel slots that are actually 'booked'
-        if slot.status.value != "booked":
+        if slot.status != "booked":
             raise HTTPException(
                 status_code=400,
                 detail={"error": f"Only 'booked' slots can be cancelled. Current status: {slot.status}"}
