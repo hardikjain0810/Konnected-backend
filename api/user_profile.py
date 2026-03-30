@@ -117,17 +117,14 @@ def get_student_sessions(
         # Join TutorSlot with User (to get Tutor Name)
         # We filter where the 'student_id' matches the logged-in user
         results = db.query(
-            TutorSlot,
+            Booking,
             Profile.display_name.label("tutor_name")
         ).join(
-            Booking, 
-            TutorSlot.id == Booking.slot_id # Bridge to the specific slot
-        ).join(
             Profile, 
-            TutorSlot.tutor_id == Profile.user_id # Link slot to the specific tutor
+            Booking.tutor_id == Profile.user_id  # Match tutor_id to user_id
         ).filter(
             Booking.student_id == request.student_id
-        ).distinct().all() # Use distinct() to prevent duplicate rows if needed
+        ).all()
 
         session_list = []
         for slot, tutor_name in results:
