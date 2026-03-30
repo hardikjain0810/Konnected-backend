@@ -134,7 +134,7 @@ def get_student_sessions(
             ).filter(
                 Booking.student_id == student_id) \
             .all()
-            
+
             session_list = []
             for slot, tutor_name in results:
                 session_list.append({
@@ -153,7 +153,12 @@ def get_student_sessions(
             }
 
         except Exception as e:
+            logger.error(f"Error in get_student_sessions: {str(e)}")
             raise HTTPException(
                 status_code=500, 
-                detail={"error": f"Failed to fetch sessions: {str(e)}"}
+                detail={
+                "response_code": "0",
+                "error": f"Internal Server Error: {str(e)}",
+                "data": []
+            }
             )
