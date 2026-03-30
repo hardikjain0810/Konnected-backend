@@ -127,6 +127,7 @@ class AvailabilityRule(Base):
     start_time = Column(Time)
     end_time = Column(Time)
     topic = Column(String)
+    short_description = Column(String)
 
 
 
