@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.database_models import User, Profile, Language, Timezone, Interest, TutorSlot, Booking
+from models.database_models import User, Profile, TutorProfile, Language, Timezone, Interest, TutorSlot, Booking
 from schemas.schemas import ProfileCreate, ProfileResponse, StudentBookingCreate, StudentBookingsResponse
 from core.utils import get_lang,success_response
 from core.auth import get_current_user
@@ -126,11 +126,11 @@ def get_student_sessions(
             student_id = UUID(student_id)
         results = db.query(
             TutorSlot,
-            Profile.display_name.label("tutor_name")
+            TutorProfile.name.label("tutor_name")
         ).join(
             Booking, TutorSlot.id == Booking.slot_id
         ).outerjoin(
-            Profile, Booking.tutor_id == Profile.user_id
+            TutorProfile, Booking.tutor_id == TutorProfile.user_id
         ).filter(
             Booking.student_id == student_id) \
         .all()
