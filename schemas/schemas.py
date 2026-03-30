@@ -84,6 +84,7 @@ class TutorProfileResponse(BaseResponse):
     data: Optional[TutorProfileData] = None
 
 class AvailabilityRuleCreate(BaseModel):
+    tutor_id: str
     availability_date: date
     start_time: time
     end_time: time

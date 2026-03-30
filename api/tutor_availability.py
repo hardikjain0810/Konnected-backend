@@ -48,7 +48,7 @@ def set_availability(
     try:
         # Save the main Availability Rule
         new_rule = AvailabilityRule(
-            tutor_id=current_user.id,
+            tutor_id=request.tutor_id,
             date=request.availability_date,
             start_time=request.start_time,
             end_time=request.end_time,
@@ -57,7 +57,7 @@ def set_availability(
         )
         db.add(new_rule)
 
-        # 4. Generate the 30-minute Slots
+        # Generate the 30-minute Slots
         # This "carves" a 60-min window into two 30-min entries
         temp_start = start_dt
         while temp_start + timedelta(minutes=30) <= end_dt:
@@ -65,13 +65,13 @@ def set_availability(
             
             # Check for overlaps to avoid UniqueConstraint errors
             exists = db.query(TutorSlot).filter(
-                TutorSlot.tutor_id == current_user.id,
+                TutorSlot.tutor_id == request.tutor_id,
                 TutorSlot.start_at == temp_start
             ).first()
 
             if not exists:
                 new_slot = TutorSlot(
-                    tutor_id=current_user.id,
+                    tutor_id=request.tutor_id,
                     start_at=temp_start,
                     end_at=temp_end,
                     status="open"
@@ -86,7 +86,7 @@ def set_availability(
             "response_code": "1",
             "detail": "Availability and 30-minute slots generated successfully!",
             "data": {
-                "tutor_id": str(current_user.id),
+                "tutor_id": request.tutor_id,
                 "availability_date": request.availability_date,
                 "start_time": request.start_time,
                 "end_time": request.end_time,
