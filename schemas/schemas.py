@@ -187,3 +187,15 @@ class GetTutorAvailabilityResponse(BaseResponse):
     response_code:str = "1"
     details: str = "list getting successfully"
     slot_list: List[GetTutorAvailabilityData]
+
+class CancelSlotCreate(BaseModel):
+    tutor_id: UUID
+    slot_id: UUID
+
+class CancelSlotData(BaseResponse):
+    tutor_id: UUID
+    slot_id: UUID
+
+class CancelSlotResponse(BaseResponse):
+    data: List[CancelSlotData]
+
