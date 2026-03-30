@@ -30,7 +30,7 @@ def set_availability(
             detail=f"You can only set availability up to 21 days in advance (until {max_future_date})"
         )
 
-    # Duration Validation (Multiples of 30)
+    # Duration Validation and time integrity
     start_dt = datetime.combine(request.availability_date, request.start_time)
     end_dt = datetime.combine(request.availability_date, request.end_time)
 
@@ -43,6 +43,17 @@ def set_availability(
             status_code=400, 
             detail="Duration must be a multiple of 30 minutes (e.g., 30, 60, 90 mins)"
         )
+    
+    # Overlap validation
+    overlapping_rule = db.query(AvailabilityRule).filter(
+        AvailabilityRule.tutor_id == request.tutor_id,
+        AvailabilityRule.date == request.availability_date,
+        AvailabilityRule.start_time < request.end_time,  # S1 < E2
+        AvailabilityRule.end_time > request.start_time   # E1 > S2
+    ).first()
+
+    if overlapping_rule:
+        raise HTTPException(status_code=400, detail=f"Conflict: You already have availability set from {overlapping_rule.start_time} to {overlapping_rule.end_time}")
 
     try:
         # Save the main Availability Rule
