@@ -166,7 +166,7 @@ class BookingsData(BaseModel):
     starts_at: datetime
     topic: str
 
-class BookinOut(BaseResponse):
+class BookingOut(BaseResponse):
     response_code: str = "1"
     detail: str
     data: List[BookingsData]
