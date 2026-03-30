@@ -70,9 +70,6 @@ def create_booking(request: SlotBookingCreate,
             ends_at=requested_slot.end_at
         )
         
-        # Mark the Slot as closed/booked so it disappears from search
-        requested_slot.status = SlotStatus.booked # Assuming SlotStatus.booked exists
-        
         db.add(new_booking)
         db.commit() # Save both changes at once
         db.refresh(new_booking)
