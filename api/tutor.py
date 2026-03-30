@@ -207,7 +207,7 @@ async def get_tutor_bookings(request: GetTutorAvailability,
             })
         return {
             "response_code":"1",
-            "details": "Slot cancelled successfully" ,
+            "detail": "Slot cancelled successfully" ,
             "slot_list": slot_list
         }
     except Exception as e:
