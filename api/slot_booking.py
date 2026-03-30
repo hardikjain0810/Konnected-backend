@@ -100,11 +100,15 @@ def get_user_bookings(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)):
 
-    bookings = db.query(Booking).filter(
-        Booking.student_id == current_user.id
-    ).all()
-    
-    if not bookings:
-        return []
+    try:
+        bookings = db.query(Booking).filter(
+            Booking.student_id == current_user.id
+        ).all()
         
-    return bookings
+        if not bookings:
+            return []
+            
+        return bookings
+    except Exception as e:
+        logger.error({"error":str(e)})
+        raise HTTPException(status_code=500, detail={"error":str(e)})
