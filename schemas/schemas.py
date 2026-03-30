@@ -199,3 +199,20 @@ class CancelSlotData(BaseResponse):
 class CancelSlotResponse(BaseResponse):
     data: List[CancelSlotData]
 
+class StudentBookingCreate(BaseModel):
+    student_id: str
+
+class StudentBookingDetail(BaseModel):
+    slot_id: UUID
+    tutor_name: str
+    start_date: str
+    start_time: str
+    end_time: str
+    status: str
+
+class StudentBookingsResponse(BaseResponse):
+    response_code: str
+    detail: str
+    data: List[StudentBookingDetail]
+
+

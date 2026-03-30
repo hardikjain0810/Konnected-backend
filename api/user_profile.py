@@ -1,14 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.database_models import User, Profile, Language, Timezone, Interest
-from schemas.schemas import ProfileCreate, ProfileResponse, ProfileData
-from core.utils import get_lang,success_response,error_response
+from models.database_models import User, Profile, Language, Timezone, Interest, TutorSlot
+from schemas.schemas import ProfileCreate, ProfileResponse, StudentBookingCreate, StudentBookingsResponse
+from core.utils import get_lang,success_response
 from core.auth import get_current_user
 from core.logging_config import logger
 from core.translations import get_text
-from core.exceptions import init_exception_handlers
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -110,3 +108,44 @@ async def update_profile(
             "bio": profile.bio
         }
     }
+
+@router.get("/my-sessions", response_model=StudentBookingsResponse)
+def get_student_sessions(
+    request: StudentBookingCreate,
+    db: Session = Depends(get_db)):
+    try:
+        # Join TutorSlot with User (to get Tutor Name)
+        # We filter where the 'student_id' matches the logged-in user
+        results = db.query(
+            TutorSlot,
+            User.full_name.label("tutor_name")
+        ).join(
+            User, TutorSlot.tutor_id == User.id
+        ).filter(
+            TutorSlot.student_id == request.student_id
+        ).order_by(
+            TutorSlot.start_at.asc()
+        ).all()
+
+        session_list = []
+        for slot, tutor_name in results:
+            session_list.append({
+                "slot_id": slot.id,
+                "tutor_name": tutor_name,
+                "start_date": slot.start_at.date().isoformat(),
+                "start_time": slot.start_at.time().strftime("%H:%M"),
+                "end_time": slot.end_at.time().strftime("%H:%M"),
+                "status": slot.status
+            })
+
+        return {
+            "response_code": "1",
+            "detail": "Retrieved booked sessions successfully",
+            "data": session_list
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail={"error": f"Failed to fetch sessions: {str(e)}"}
+        )
