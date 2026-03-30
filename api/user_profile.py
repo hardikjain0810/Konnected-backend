@@ -140,9 +140,9 @@ def get_student_sessions(
             session_list.append({
                 "slot_id": str(slot.id),
                 "tutor_name": tutor_name,
-                "start_date": slot.starts_at.date().isoformat(),
+                "start_date": slot.start_at.date().isoformat(),
                 "start_time": slot.start_at.time().strftime("%H:%M"),
-                "end_time": slot.ends_at.time().strftime("%H:%M"),
+                "end_time": slot.end_at.time().strftime("%H:%M"),
                 "status": str(slot.status)
             })
 
