@@ -160,3 +160,13 @@ class TutorTopicResponse(BaseModel):
     response_code: str = "1"
     detail: str
     topics: List[str]
+
+class BookingsData(BaseModel):
+    display_name: str
+    starts_at: datetime
+    topic: str
+
+class BookinOut(BaseResponse):
+    response_code: str = "1"
+    detail: str
+    data: List[BookingsData]

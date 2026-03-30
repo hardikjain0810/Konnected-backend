@@ -7,7 +7,7 @@ from core.auth import get_current_user
 from db.database import get_db
 from core.translations import get_text
 from models.database_models import TutorSlot, SlotStatus, BookingStatus, Booking
-from schemas.schemas import SlotBookingCreate, SlotBookingResponse
+from schemas.schemas import SlotBookingCreate, SlotBookingResponse, BookingOut
 import uuid
 from core.auth import get_current_user
 from fastapi.encoders import jsonable_encoder
@@ -94,3 +94,17 @@ def create_booking(request: SlotBookingCreate,
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error while processing booking."
         )
+    
+@router.get("/bookings", response_model=BookingOut)
+def get_user_bookings(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)):
+
+    bookings = db.query(Booking).filter(
+        Booking.student_id == current_user.id
+    ).all()
+    
+    if not bookings:
+        return []
+        
+    return bookings
