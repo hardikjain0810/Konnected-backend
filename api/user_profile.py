@@ -154,11 +154,4 @@ def get_student_sessions(
 
     except Exception as e:
         logger.error(f"Error in get_student_sessions: {str(e)}")
-        raise HTTPException(
-            status_code=500, 
-            detail={
-            "response_code": "0",
-            "error": f"Internal Server Error: {str(e)}",
-            "data": []
-        }
-        )
+        raise HTTPException(status_code=500, detail={"error":str(e)}) 
