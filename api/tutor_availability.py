@@ -98,4 +98,4 @@ def set_availability(
     except Exception as e:
         db.rollback()
         logger.error(f"Error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail={str(e)})
