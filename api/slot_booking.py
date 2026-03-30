@@ -15,7 +15,7 @@ from fastapi.encoders import jsonable_encoder
 router = APIRouter(prefix="", tags=["tutor"])
 logger = get_logger()
 
-@router.post("/book", status_code=status.HTTP_201_CREATED, response_model=SlotBookingResponse)
+@router.post("/bookings", status_code=status.HTTP_201_CREATED, response_model=SlotBookingResponse)
 def create_booking(request: SlotBookingCreate, 
                    req: Request,
                    db: Session = Depends(get_db), 

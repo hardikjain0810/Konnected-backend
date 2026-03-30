@@ -88,6 +88,7 @@ class AvailabilityRuleCreate(BaseModel):
     start_time: time
     end_time: time
     topic: str
+    short_description: str
 
 class AvailabilityRuleData(BaseModel):
     tutor_id: str
@@ -95,6 +96,7 @@ class AvailabilityRuleData(BaseModel):
     start_time: time
     end_time: time
     topic: str
+    short_description : str
 
 class AvailabilityResponse(BaseModel):
     response_code: str = "1"

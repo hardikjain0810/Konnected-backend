@@ -18,7 +18,7 @@ def set_availability(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    # 1. Date Range Validation (The 21-Day Rule)
+    # Date Range Validation (The 21-Day Rule)
     today = date.today()
     max_future_date = today + timedelta(days=21)
 
@@ -31,7 +31,7 @@ def set_availability(
             detail=f"You can only set availability up to 21 days in advance (until {max_future_date})"
         )
 
-    # 2. Duration Validation (Multiples of 30)
+    # Duration Validation (Multiples of 30)
     start_dt = datetime.combine(request.availability_date, request.start_time)
     end_dt = datetime.combine(request.availability_date, request.end_time)
 
@@ -46,13 +46,14 @@ def set_availability(
         )
 
     try:
-        # 3. Save the main Availability Rule
+        # Save the main Availability Rule
         new_rule = AvailabilityRule(
             tutor_id=current_user.id,
             date=request.availability_date,
             start_time=request.start_time,
             end_time=request.end_time,
-            topic=request.topic
+            topic=request.topic,
+            short_description=request.short_description
         )
         db.add(new_rule)
 
@@ -89,7 +90,8 @@ def set_availability(
                 "availability_date": request.availability_date,
                 "start_time": request.start_time,
                 "end_time": request.end_time,
-                "topic": request.topic
+                "topic": request.topic, 
+                "short_description": request.short_description
             }
         }
 

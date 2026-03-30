@@ -141,8 +141,7 @@ async def update_tutor_profile(
 @router.get("/recommended", response_model=MarketplaceResponse)
 def get_home_tutors(
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
+    current_user = Depends(get_current_user)):
     # Get student's target language
     student = db.query(Profile).filter(Profile.user_id == current_user.id).first()
     if student is None:
