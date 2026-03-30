@@ -141,7 +141,7 @@ def get_student_sessions(
                 "slot_id": str(slot.id),
                 "tutor_name": tutor_name,
                 "start_date": slot.starts_at.date().isoformat(),
-                "start_time": slot.starts_at.time().strftime("%H:%M"),
+                "start_time": slot.start_at.time().strftime("%H:%M"),
                 "end_time": slot.ends_at.time().strftime("%H:%M"),
                 "status": str(slot.status)
             })
