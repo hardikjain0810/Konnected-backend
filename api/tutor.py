@@ -208,7 +208,7 @@ async def get_tutor_bookings(request: GetTutorAvailability,
         return {
             "response_code":"1",
             "detail": "Successfully displayed list " ,
-            "data": {"slot_list":slot_list}
+            "data": slot_list
         }
     except Exception as e:
         logger.error({"error":str(e)})
