@@ -41,7 +41,7 @@ def cancel_and_reopen_slot(
         )
 
     # Validation: Only cancel slots that are actually 'booked'
-    if slot.status != SlotStatus.booked:
+    if slot.status != SlotStatus.open:
         raise HTTPException(
             status_code=400,
             detail={"error": f"Only 'booked' slots can be cancelled. Current status: {slot.status}"}
