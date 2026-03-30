@@ -173,7 +173,7 @@ class BookingOut(BaseResponse):
     data: List[BookingsData]
 
 class GetTutorAvailability(BaseModel):
-    tutor_id: str
+    tutor_id: UUID
     availability_date: date
 
 class GetTutorAvailabilityResponse(BaseResponse):
