@@ -174,7 +174,7 @@ class BookingOut(BaseResponse):
 
 class GetTutorAvailability(BaseModel):
     tutor_id: str
-    availability_date: datetime
+    availability_date: date
 
 class GetTutorAvailabilityResponse(BaseResponse):
     tutor_id: str
