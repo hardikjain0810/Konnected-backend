@@ -186,7 +186,7 @@ class GetTutorAvailabilityData(BaseModel):
 class GetTutorAvailabilityResponse(BaseResponse):
     response_code:str
     detail: str 
-    slot_list: List[GetTutorAvailabilityData]
+    data: List[GetTutorAvailabilityData]
 
 class CancelSlotCreate(BaseModel):
     tutor_id: UUID
