@@ -121,20 +121,20 @@ def get_student_sessions(
             Profile.display_name.label("tutor_name")
         ).join(
             Profile, 
-            Booking.tutor_id == Profile.user_id  # Match tutor_id to user_id
+            Booking.tutor_id == Profile.user_id
         ).filter(
             Booking.student_id == request.student_id
-        ).all()
+        ).order_by(Booking.starts_at.asc()).all()
 
         session_list = []
-        for slot, tutor_name in results:
+        for booking, tutor_name in results:
             session_list.append({
-                "slot_id": slot.id,
+                "slot_id": str(booking.slot_id),
                 "tutor_name": tutor_name,
-                "start_date": slot.start_at.date().isoformat(),
-                "start_time": slot.start_at.time().strftime("%H:%M"),
-                "end_time": slot.end_at.time().strftime("%H:%M"),
-                "status": slot.status
+                "start_date": booking.starts_at.date().isoformat(),
+                "start_time": booking.starts_at.time().strftime("%H:%M"),
+                "end_time": booking.ends_at.time().strftime("%H:%M"),
+                "status": str(booking.status)
             })
 
         return {
