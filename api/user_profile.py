@@ -119,16 +119,11 @@ def get_student_sessions(
         results = db.query(
             TutorSlot,
             Profile.display_name.label("tutor_name")
-        ).join(
-            Booking, 
-            TutorSlot.id == Booking.slot_id
-        ).join(
-            Profile, 
-            Booking.tutor_id == Profile.user_id
-        ).filter(
-            Booking.student_id == request.student_id
-        ).order_by(TutorSlot.start_at.asc()).all()
-
+        ).select_from(Booking) \
+        .join(TutorSlot, TutorSlot.id == Booking.slot_id) \
+        .outerjoin(Profile, Booking.tutor_id == Profile.user_id) \
+        .filter(Booking.student_id == request.student_id) \
+        .all()
         session_list = []
         for slot, tutor_name in results:
             session_list.append({
