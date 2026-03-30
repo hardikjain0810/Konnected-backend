@@ -124,7 +124,7 @@ def get_student_sessions(
         ).filter(
             Booking.student_id == request.student_id
         ).order_by(
-            TutorSlot.starts_at.asc()
+            TutorSlot.start_at.asc()
         ).all()
 
         session_list = []
