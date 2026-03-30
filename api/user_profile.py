@@ -120,12 +120,14 @@ def get_student_sessions(
             TutorSlot,
             Profile.display_name.label("tutor_name")
         ).join(
-            Booking, TutorSlot.id == Booking.slot_id
+            Booking, 
+            TutorSlot.id == Booking.slot_id # Bridge to the specific slot
+        ).join(
+            Profile, 
+            TutorSlot.tutor_id == Profile.id # Link slot to the specific tutor
         ).filter(
             Booking.student_id == request.student_id
-        ).order_by(
-            TutorSlot.start_at.asc()
-        ).all()
+        ).distinct().all() # Use distinct() to prevent duplicate rows if needed
 
         session_list = []
         for slot, tutor_name in results:
