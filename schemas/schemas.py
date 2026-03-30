@@ -183,7 +183,7 @@ class GetTutorAvailabilityData(BaseModel):
     end_time: time
     topics: str
 
-class GetTutorAvailabilityData(BaseResponse):
+class GetTutorAvailabilityResponse(BaseResponse):
     response_code:str = "1"
     details: str = "list getting successfully"
     slot_list: List[GetTutorAvailabilityData]
