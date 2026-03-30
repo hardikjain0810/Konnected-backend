@@ -5,7 +5,7 @@ from db.database import get_db
 from sqlalchemy.orm import Session
 from core.logging_config import get_logger
 from schemas.schemas import CancelSlotCreate, CancelSlotResponse
-from models.database_models import TutorSlot
+from models.database_models import TutorSlot, SlotStatus
 
 
 router = APIRouter(prefix="", tags=["tutor"])
@@ -41,7 +41,7 @@ def cancel_and_reopen_slot(
         )
 
     # Validation: Only cancel slots that are actually 'booked'
-    if str(slot.status) != "booked":
+    if slot.status != SlotStatus.booked:
         raise HTTPException(
             status_code=400,
             detail={"error": f"Only 'booked' slots can be cancelled. Current status: {slot.status}"}
