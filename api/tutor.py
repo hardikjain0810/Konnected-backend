@@ -176,7 +176,7 @@ def get_home_tutors(
         "data":{"tutors": results}
         }
 
-@router.get("/bookings",response_model=GetTutorAvailabilityResponse)
+@router.post("/bookings",response_model=GetTutorAvailabilityResponse)
 async def get_tutor_bookings(request: GetTutorAvailability,
                              db: Session = Depends(get_db)):
     try:
