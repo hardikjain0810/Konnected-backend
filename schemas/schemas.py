@@ -184,8 +184,8 @@ class GetTutorAvailabilityData(BaseModel):
     topics: str
 
 class GetTutorAvailabilityResponse(BaseResponse):
-    response_code:str = "1"
-    details: str = "list getting successfully"
+    response_code:str
+    details: str 
     slot_list: List[GetTutorAvailabilityData]
 
 class CancelSlotCreate(BaseModel):
