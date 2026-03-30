@@ -117,14 +117,14 @@ def get_student_sessions(
         # Join TutorSlot with User (to get Tutor Name)
         # We filter where the 'student_id' matches the logged-in user
         results = db.query(
-            Booking,
+            TutorSlot,
             Profile.display_name.label("tutor_name")
         ).join(
-            Profile, Booking.tutor_id == Profile.user_id
+            Booking, TutorSlot.id == Booking.slot_id
         ).filter(
             Booking.student_id == request.student_id
         ).order_by(
-            Booking.starts_at.asc()
+            TutorSlot.starts_at.asc()
         ).all()
 
         session_list = []
