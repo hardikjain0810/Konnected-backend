@@ -118,9 +118,9 @@ def get_student_sessions(
         # We filter where the 'student_id' matches the logged-in user
         results = db.query(
             TutorSlot,
-            User.full_name.label("tutor_name")
+            Profile.display_name.label("tutor_name")
         ).join(
-            User, TutorSlot.tutor_id == User.id
+            Profile, TutorSlot.tutor_id == User.id
         ).filter(
             TutorSlot.student_id == request.student_id
         ).order_by(
