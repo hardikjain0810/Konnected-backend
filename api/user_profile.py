@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.database_models import User, Profile, Language, Timezone, Interest, TutorSlot
+from models.database_models import User, Profile, Language, Timezone, Interest, TutorSlot, Booking
 from schemas.schemas import ProfileCreate, ProfileResponse, StudentBookingCreate, StudentBookingsResponse
 from core.utils import get_lang,success_response
 from core.auth import get_current_user
@@ -117,14 +117,14 @@ def get_student_sessions(
         # Join TutorSlot with User (to get Tutor Name)
         # We filter where the 'student_id' matches the logged-in user
         results = db.query(
-            TutorSlot,
+            Booking,
             Profile.display_name.label("tutor_name")
         ).join(
-            Profile, TutorSlot.tutor_id == User.id
+            Profile, Booking.tutor_id == User.id
         ).filter(
-            TutorSlot.student_id == request.student_id
+            Booking.student_id == request.student_id
         ).order_by(
-            TutorSlot.start_at.asc()
+            Booking.start_at.asc()
         ).all()
 
         session_list = []
