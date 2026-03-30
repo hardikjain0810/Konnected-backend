@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
-from . import models, oauth2
 from db.database import get_db
 from sqlalchemy.orm import Session
 from core.logging_config import get_logger
 from schemas.schemas import CancelSlotCreate, CancelSlotResponse
+from models.database_models import TutorSlot
 
 
 router = APIRouter(prefix="", tags=["tutor"])
@@ -18,9 +18,9 @@ def cancel_and_reopen_slot(
     
     try:
         # Fetch the slot
-        slot = db.query(models.TutorSlot).filter(
-            models.TutorSlot.id == request.slot_id,
-            models.TutorSlot.tutor_id == request.tutor_id
+        slot = db.query(TutorSlot).filter(
+            TutorSlot.id == request.slot_id,
+            TutorSlot.tutor_id == request.tutor_id
         ).first()
 
         if not slot:
