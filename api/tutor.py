@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from db.database import get_db
 from models.database_models import User, TutorProfile, Language, TutorTopic, RoleType, UserRole, TutorSlot, Booking,AvailabilityRule, Profile
-from schemas.schemas import TutorProfileCreate, TutorProfileResponse, TutorDetailResponse, MarketplaceResponse
+from schemas.schemas import TutorProfileCreate, TutorProfileResponse, TutorDetailResponse, MarketplaceResponse, GetTutorAvailability, GetTutorAvailabilityResponse
 from datetime import timezone, datetime
 from core.utils import get_lang
 from core.auth import get_current_user
@@ -10,7 +10,7 @@ from core.logging_config import logger
 from core.translations import get_text
 from core.exceptions import init_exception_handlers
 from typing import List
-from sqlalchemy import and_, asc
+from sqlalchemy import and_, asc, func
 from uuid import uuid4, UUID
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
@@ -218,3 +218,36 @@ async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
         "detail":"Profile for specific tutor id",
         "data":tutor_data
     }
+
+@router.get("/bookings",response_model=GetTutorAvailabilityResponse)
+async def get_tutor_bookings(request: GetTutorAvailability,
+                             db: Session = Depends(get_db)):
+    try:
+        query = db.query(
+            TutorSlot, 
+            AvailabilityRule.topic
+        ).join(
+            AvailabilityRule, 
+            (TutorSlot.tutor_id == AvailabilityRule.tutor_id) & 
+            (func.date(TutorSlot.start_at) == AvailabilityRule.date)
+        ).filter(
+            TutorSlot.tutor_id == request.tutor_id,
+        )
+
+        if request.availability_date:
+            query = query.filter(func.date(TutorSlot.start_at) == request.availability_date)
+
+        results = query.order_by(TutorSlot.start_at.asc()).all()
+
+        slot_list = []
+        for slot, topic in results:
+            slot_list.append({
+                "tutor_id": str(slot.tutor_id),
+                "date": slot.start_at.date().isoformat(),
+                "start_time": slot.start_at.time().strftime("%H:%M"),
+                "end_time": slot.end_at.time().strftime("%H:%M"),
+                "topics": topic 
+            })
+    except Exception as e:
+        logger.error({"error":str(e)})
+        raise HTTPException(status_code=500, detail={"error":str(e)}) 

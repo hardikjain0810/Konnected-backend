@@ -171,3 +171,14 @@ class BookingOut(BaseResponse):
     response_code: str = "1"
     detail: str
     data: List[BookingsData]
+
+class GetTutorAvailability(BaseModel):
+    tutor_id: str
+    availability_date: datetime
+
+class GetTutorAvailabilityResponse(BaseResponse):
+    tutor_id: str
+    date: date
+    start_time: time
+    end_time: time
+    topics: str
