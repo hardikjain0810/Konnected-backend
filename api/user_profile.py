@@ -120,7 +120,7 @@ def get_student_sessions(
             Booking,
             Profile.display_name.label("tutor_name")
         ).join(
-            Profile, Booking.tutor_id == User.id
+            Profile, Booking.tutor_id == Profile.id
         ).filter(
             Booking.student_id == request.student_id
         ).order_by(
