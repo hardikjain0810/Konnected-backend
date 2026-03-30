@@ -205,6 +205,7 @@ async def get_tutor_bookings(request: GetTutorAvailability,
                 "end_time": slot.end_at.time().strftime("%H:%M"),
                 "topics": topic 
             })
+        return slot_list
     except Exception as e:
         logger.error({"error":str(e)})
         raise HTTPException(status_code=500, detail={"error":str(e)}) 
