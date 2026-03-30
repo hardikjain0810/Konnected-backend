@@ -206,8 +206,6 @@ async def get_tutor_bookings(request: GetTutorAvailability,
                 "topics": topic 
             })
         return {
-            "response_code": "1",
-            "detail": "list getting successfully",
             "slot_list": slot_list
         }
     except Exception as e:
