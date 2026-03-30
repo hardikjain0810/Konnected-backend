@@ -176,9 +176,14 @@ class GetTutorAvailability(BaseModel):
     tutor_id: UUID
     availability_date: date
 
-class GetTutorAvailabilityResponse(BaseResponse):
+class GetTutorAvailabilityData(BaseModel):
     tutor_id: str
     date: date
     start_time: time
     end_time: time
     topics: str
+
+class GetTutorAvailabilityData(BaseResponse):
+    response_code:str = "1"
+    details: str = "list getting successfully"
+    slot_list: List[GetTutorAvailabilityData]
