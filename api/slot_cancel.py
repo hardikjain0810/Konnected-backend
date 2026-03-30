@@ -62,6 +62,5 @@ def cancel_and_reopen_slot(
             raise HTTPException(status_code=500, detail={"error": str(e)})
         
     except Exception as e:
-        db.rollback()
         logger.error({"error":str(e)})
         raise HTTPException(status_code=500, detail={"error":str(e)})
