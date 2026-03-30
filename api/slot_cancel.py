@@ -55,7 +55,7 @@ def cancel_and_reopen_slot(
         return {
             "response_code": "1",
             "detail": "Slot has been successfully cancelled and is now open for new bookings.",
-            "data": None
+            "data": []
         }
 
     except Exception as e:
