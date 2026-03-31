@@ -236,5 +236,5 @@ class GetAvailabilityRuleData(BaseModel):
 class GetAvailabilityResponse(BaseResponse):
     response_code: str 
     detail: str
-    data: List[AvailabilityRuleData] = None
+    data: List[GetAvailabilityRuleData] = None
 
