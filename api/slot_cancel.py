@@ -50,10 +50,10 @@ def delete_tutor_slot_and_rule(
         return {
             "response_code": "1",
             "detail": "Slot deleted successfully",
-            "data": {
+            "data": [{
                 "tutor_id":request.tutor_id,
                 "slot_id":request.slot_id
-            }
+            }]
         } # 204 No Content doesn't return a body
 
     except Exception as e:
