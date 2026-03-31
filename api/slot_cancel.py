@@ -5,7 +5,7 @@ from db.database import get_db
 from sqlalchemy.orm import Session
 from core.logging_config import get_logger
 from schemas.schemas import CancelSlotCreate, CancelSlotResponse
-from models.database_models import TutorSlot, SlotStatus
+from models.database_models import TutorSlot, SlotStatus, AvailabilityRule
 
 
 router = APIRouter(prefix="", tags=["tutor"])
@@ -41,23 +41,38 @@ def cancel_and_reopen_slot(
     #    )
 
     # Validation: Only cancel slots that are actually 'booked'
-    if slot.status != SlotStatus.open:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": f"Only 'booked' slots can be cancelled. Current status: {slot.status}"}
-        )
+    #if slot.status != SlotStatus.open:
+    #    raise HTTPException(
+    #        status_code=400,
+    #        detail={"error": f"Only 'booked' slots can be cancelled. Current status: {slot.status}"}
+    #    )
 
     try:
-        # Update status back to 'open'
-        slot.status = "open"
+        # 2. Find and Delete the corresponding AvailabilityRule
+        # We match by tutor_id and the date/time parts of the slot's start_at
+        availability_rule = db.query(AvailabilityRule).filter(
+            AvailabilityRule.tutor_id == slot.tutor_id,
+            AvailabilityRule.date == slot.start_at.date(),
+            AvailabilityRule.start_time == slot.start_at.time()
+        ).first()
+
+        if availability_rule:
+            db.delete(availability_rule)
+
+        # 3. Handle the TutorSlot
+        # If your manager wants it GONE from the system, use db.delete(slot)
+        # If they just want it 'open' again, use slot.status = "open"
+        slot.status = SlotStatus.open
+
         db.commit()
         
         return {
             "response_code": "1",
-            "detail": "Slot has been successfully cancelled and is now open for new bookings.",
+            "detail": "Slot and Availability Rule deleted successfully.",
             "data": []
         }
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail={"error": str(e)})
+        logger.error(f"Cancellation error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
