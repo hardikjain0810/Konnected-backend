@@ -217,7 +217,7 @@ class StudentBookingsResponse(BaseResponse):
 
 class GetAvailabilityRuleCreate(BaseModel):
     tutor_id: str
-    availability_date: date
+    availability_date: Optional[str]
 
 class GetAvailabilityRuleData(BaseModel):
     tutor_id: str
