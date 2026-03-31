@@ -58,4 +58,4 @@ def delete_tutor_slot(
     except Exception as e:
         db.rollback()
         logger.error(f"Deletion Error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=500, detail=str(e))
