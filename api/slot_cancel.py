@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 from db.database import get_db
 from sqlalchemy.orm import Session
+from sqlalchemy import Date, Time, cast
 from core.logging_config import get_logger
 from schemas.schemas import CancelSlotCreate, CancelSlotResponse
 from models.database_models import TutorSlot, SlotStatus, AvailabilityRule
@@ -17,8 +18,7 @@ def delete_tutor_slot(
     request: CancelSlotCreate, 
     db: Session = Depends(get_db)
 ):
-    # 1. Fetch the specific 30-minute slot
-    # We filter by both IDs to ensure the tutor owns this specific slot
+    # 1. Fetch the specific slot based on tutor_id and the slot_id from params
     slot = db.query(TutorSlot).filter(
         TutorSlot.id == slot_id,
         TutorSlot.tutor_id == request.tutor_id
@@ -30,33 +30,39 @@ def delete_tutor_slot(
             detail="Slot not found or does not belong to this tutor."
         )
 
-    # 2. Safety Check: Is it already booked?
-    # If a student already booked it, you might want to prevent deletion 
-    # or trigger a refund/notification logic here.
-    if slot.status == SlotStatus.booked:
-        # Optional: raise error if you don't allow deleting booked sessions
-        # raise HTTPException(status_code=400, detail="Cannot delete a booked slot.")
-        pass
+    # 2. Find the corresponding AvailabilityRule
+    # We match by tutor, date, and start_time to find the exact rule that created this 30m slot
+    rule = db.query(AvailabilityRule).filter(
+        AvailabilityRule.tutor_id == slot.tutor_id,
+        AvailabilityRule.date == cast(slot.start_at, Date),
+        AvailabilityRule.start_time == cast(slot.start_at, Time)
+    ).first()
 
     try:
-        # 3. Delete ONLY the TutorSlot
-        # This keeps the 1-4 hour AvailabilityRule intact for other slots
-        db.delete(slot)
+        # 3. Action: Delete from AvailabilityRule table
+        if rule:
+            db.delete(rule)
+        
+            # 4. Action: Mark TutorSlot as 'disabled' instead of deleting
+            # Note: Ensure "disabled" is a valid value in your SlotStatus Enum or String column
+            slot.status = "disabled" 
+        
         db.commit()
         db.refresh(slot)
 
         return {
             "response_code": "1",
-            "detail": "30-minute slot successfully removed from schedule.",
+            "detail": "Slot disabled and availability rule removed successfully.",
             "data": [
                 {
-                    "tutor_id": request.tutor_id,
-                    "slot_id": slot_id
+                    "tutor_id": str(request.tutor_id),
+                    "slot_id": str(slot_id),
+                    "new_status": slot.status
                 }
             ]
         }
 
     except Exception as e:
         db.rollback()
-        logger.error(f"Deletion Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Cancellation Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="An error occurred during cancellation.")
