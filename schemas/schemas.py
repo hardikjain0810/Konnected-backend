@@ -99,7 +99,7 @@ class AvailabilityRuleData(BaseModel):
     topic: str
     short_description : str
 
-class AvailabilityResponse(BaseModel):
+class AvailabilityResponse(BaseResponse):
     response_code: str 
     detail: str
     data: List[AvailabilityRuleData] = None

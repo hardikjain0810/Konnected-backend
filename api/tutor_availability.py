@@ -110,7 +110,7 @@ def set_availability(
         logger.error({"error":str(e)})
         raise HTTPException(status_code=500, detail={"error":str(e)})
     
-@router.get("/availability/{tutor_id}", response_model=List[AvailabilityResponse])
+@router.get("/availability/{tutor_id}", response_model=AvailabilityResponse)
 def get_tutor_availability(
     tutor_id: str,
     availability_date: Optional[date],
@@ -132,10 +132,10 @@ def get_tutor_availability(
         availabilities = query.order_by(AvailabilityRule.date.asc(), AvailabilityRule.start_time.asc()).all()
 
         return {
-        "response_code": "1",
-        "detail": "Successfully displayed list",
-        "data": availabilities
-    }
+            "response_code": "1",
+            "detail": "Successfully displayed list",
+            "data": availabilities
+        }
 
     except Exception as e:
         logger.error(f"Error fetching availability for tutor {tutor_id}: {str(e)}")
