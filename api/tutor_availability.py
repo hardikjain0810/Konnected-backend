@@ -96,14 +96,7 @@ def set_availability(
         return {
             "response_code": "1",
             "detail": "Availability and 30-minute slots generated successfully!",
-            "data": {
-                "tutor_id": request.tutor_id,
-                "availability_date": request.availability_date,
-                "start_time": request.start_time,
-                "end_time": request.end_time,
-                "topic": request.topic, 
-                "short_description": request.short_description
-            }
+            "data": [new_rule]
         }
 
     except Exception as e:
