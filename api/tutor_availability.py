@@ -113,7 +113,7 @@ def set_availability(
 @router.get("/availability/{tutor_id}", response_model=List[AvailabilityResponse])
 def get_tutor_availability(
     tutor_id: str,
-    availability_date: Optional[date] = Query(default=None),
+    availability_date: Optional[date],
     db: Session = Depends(get_db)
 ):
     """
