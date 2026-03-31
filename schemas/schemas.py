@@ -216,7 +216,7 @@ class StudentBookingsResponse(BaseResponse):
     data: List[StudentBookingDetail]
 
 class GetAvailabilityRuleCreate(BaseModel):
-    tutor_id: str
+    tutor_id: UUID
     availability_date: Optional[str]
 
 class GetAvailabilityRuleData(BaseModel):
