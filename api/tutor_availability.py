@@ -110,7 +110,7 @@ def set_availability(
         logger.error({"error":str(e)})
         raise HTTPException(status_code=500, detail={"error":str(e)})
     
-@router.get("/list-availability/{tutor_id}", response_model=GetAvailabilityResponse)
+@router.post("/list-availability/{tutor_id}", response_model=GetAvailabilityResponse)
 def get_tutor_availability(
     request: GetAvailabilityRuleCreate,
     db: Session = Depends(get_db)
