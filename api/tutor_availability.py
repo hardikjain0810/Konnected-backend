@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, date
 from core.logging_config import get_logger
@@ -113,7 +113,7 @@ def set_availability(
 @router.get("/availability/{tutor_id}", response_model=List[AvailabilityResponse])
 def get_tutor_availability(
     tutor_id: str,
-    availability_date: Optional[date] ,
+    availability_date: Optional[date] = Query(default=None),
     db: Session = Depends(get_db)
 ):
     """
