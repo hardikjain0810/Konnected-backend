@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, List, Optional
 from datetime import date, time
 from uuid import UUID
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from models.database_models import AvailabilityRule
 from models.database_models import (
     BookingStatus,
@@ -226,6 +226,11 @@ class GetAvailabilityRuleData(BaseModel):
     end_time: time
     topic: str
     short_description : str
+
+    model_config = ConfigDict(
+        from_attributes=True, 
+        populate_by_name=True  # Allows using either 'date' or 'availability_date'
+    )
 
 class GetAvailabilityResponse(BaseResponse):
     response_code: str 
