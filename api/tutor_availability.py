@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, date
 from core.logging_config import get_logger
 from core.utils import get_lang
-from core.auth import get_current_user
+from typing import Optional, List
 from db.database import get_db
 from core.translations import get_text
 from models.database_models import AvailabilityRule, TutorSlot
@@ -109,3 +109,32 @@ def set_availability(
         db.rollback()
         logger.error({"error":str(e)})
         raise HTTPException(status_code=500, detail={"error":str(e)})
+    
+@router.get("/availability/{tutor_id}", response_model=List[AvailabilityResponse])
+def get_tutor_availability(
+    tutor_id: int,
+    availability_date: Optional[date] ,
+    db: Session = Depends(get_db)
+):
+    """
+    Fetch all availability rules for a specific tutor.
+    If availability_date is provided, filters for that specific day.
+    """
+    try:
+        # Start the query
+        query = db.query(AvailabilityRule).filter(AvailabilityRule.tutor_id == tutor_id)
+
+        # Apply date filter if provided
+        if availability_date:
+            query = query.filter(AvailabilityRule.date == availability_date)
+
+        # Order by date and then start time for a clean UI experience
+        availabilities = query.order_by(AvailabilityRule.date.asc(), AvailabilityRule.start_time.asc()).all()
+
+        # If you need to wrap this in your standard response format:
+        # (Adjusting based on your AvailabilityResponse schema)
+        return availabilities
+
+    except Exception as e:
+        logger.error(f"Error fetching availability for tutor {tutor_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
