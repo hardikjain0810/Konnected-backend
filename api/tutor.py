@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from db.database import get_db
 from models.database_models import User, TutorProfile, Language, TutorTopic, RoleType, UserRole, TutorSlot, Booking,AvailabilityRule, Profile
-from schemas.schemas import TutorProfileCreate, TutorProfileResponse, TutorDetailResponse, MarketplaceResponse, GetTutorAvailability, GetTutorAvailabilityResponse
+from schemas.schemas import TutorProfileCreate, TutorProfileResponse, TutorDetailResponse, MarketplaceResponse, GetTutorAvailability, GetTutorAvailabilityResponse, TutorSearchRequest
 from datetime import timezone, datetime
 from core.utils import get_lang
 from core.auth import get_current_user
