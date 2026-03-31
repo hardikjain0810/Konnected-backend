@@ -35,7 +35,6 @@ def delete_tutor_slot_and_rule(
         availability_rule = db.query(AvailabilityRule).filter(
             AvailabilityRule.tutor_id == request.tutor_id,
             AvailabilityRule.date == slot.start_at.date(),
-            AvailabilityRule.start_time == slot.start_at.time()
         ).first()
 
         # 3. Perform Deletions
