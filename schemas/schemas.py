@@ -92,12 +92,17 @@ class AvailabilityRuleCreate(BaseModel):
     short_description: str
 
 class AvailabilityRuleData(BaseModel):
-    tutor_id: str
-    availability_date: date
+    tutor_id: Union[UUID,str]
+    availability_date: date = Field(alias="date")
     start_time: time
     end_time: time
     topic: str
     short_description : str
+
+    model_config = ConfigDict(
+        from_attributes=True, 
+        populate_by_name=True 
+    )
 
 class AvailabilityResponse(BaseResponse):
     response_code: str 
