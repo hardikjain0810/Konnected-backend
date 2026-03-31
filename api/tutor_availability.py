@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import Date
 from datetime import datetime, timedelta, date
 from core.logging_config import get_logger
 from core.utils import get_lang
