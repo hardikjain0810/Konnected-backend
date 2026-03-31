@@ -7,7 +7,7 @@ from core.utils import get_lang
 from typing import Optional, List
 from db.database import get_db
 from core.translations import get_text
-from models.database_models import AvailabilityRule, TutorSlot
+from models.database_models import AvailabilityRule, TutorSlot, Booking
 from schemas.schemas import AvailabilityRuleCreate, AvailabilityResponse, GetAvailabilityResponse, GetAvailabilityRuleCreate
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
@@ -131,6 +131,21 @@ def get_tutor_availability(
             cast(TutorSlot.start_at, Time) == rule.start_time
         ).first()
 
+        final_status = "open"
+        current_slot_id = None
+
+        if slot:
+            current_slot_id = slot.id
+            # Check if a booking exists for this slot
+            booking = db.query(Booking).filter(Booking.slot_id == slot.id).first()
+            
+            if booking:
+                # If booked, show the booking status (e.g., 'confirmed', 'pending')
+                final_status = booking.status 
+            else:
+                # If not in booking table, show the slot's own status (e.g., 'open')
+                final_status = slot.status.value if hasattr(slot.status, 'value') else slot.status
+
         formatted_data.append({
             "slot_id": slot[0] if slot else None,
             "tutor_id": rule.tutor_id,
@@ -138,7 +153,8 @@ def get_tutor_availability(
             "start_time": rule.start_time,
             "end_time": rule.end_time,
             "topic": rule.topic,
-            "short_description": rule.short_description
+            "short_description": rule.short_description,
+            "status": str(final_status)
         })
 
     return {

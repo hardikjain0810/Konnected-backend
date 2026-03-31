@@ -233,6 +233,7 @@ class GetAvailabilityRuleData(BaseModel):
     end_time: time
     topic: str
     short_description : str
+    status: str
 
     model_config = ConfigDict(
         from_attributes=True, 
