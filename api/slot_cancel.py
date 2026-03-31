@@ -31,14 +31,14 @@ def cancel_and_reopen_slot(
 
     # 1-Hour Cancellation Rule
     # Calculate the time difference between 'now' and the slot start time
-    now = datetime.now()
-    time_until_start = slot.start_at - now
+    #now = datetime.now()
+    #time_until_start = slot.start_at - now
 
-    if time_until_start < timedelta(hours=1):
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "Cannot cancel a slot within 1 hour of the start time."}
-        )
+    #if time_until_start < timedelta(hours=1):
+    #    raise HTTPException(
+    #        status_code=400,
+    #        detail={"error": "Cannot cancel a slot within 1 hour of the start time."}
+    #    )
 
     # Validation: Only cancel slots that are actually 'booked'
     if slot.status != SlotStatus.open:

@@ -116,55 +116,40 @@ def get_tutor_availability(
     request: GetAvailabilityRuleCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    Fetch all availability rules for a specific tutor.
-    If availability_date is provided, filters for that specific day.
-    """
-    try: 
-        # 1. Start the Base Query
-        query = db.query(
-        AvailabilityRule, 
-        TutorSlot.id.label("slot_id")
-        ).join(
-        TutorSlot, 
-        (TutorSlot.tutor_id == AvailabilityRule.tutor_id) & 
-        (cast(TutorSlot.start_at, Date) == AvailabilityRule.date) &
-        (cast(TutorSlot.start_at, Time) == AvailabilityRule.start_time) # Match the time!
-        ).filter(
-        AvailabilityRule.tutor_id == request.tutor_id
-        )
-        # 2. Handle the "empty string" or "missing" logic
-        if request.availability_date and request.availability_date.strip() != "":
-            try:
-                # Convert the string to a date object manually
-                parsed_date = datetime.strptime(request.availability_date, "%Y-%m-%d").date()
-                query = query.filter(AvailabilityRule.date == parsed_date)
-            except ValueError:
-                raise HTTPException(
-                    status_code=400, 
-                    detail="Invalid date format. Please use YYYY-MM-DD"
-                )
-        data_list  = query.all()
+    # 1. Get the rules first
+    query = db.query(AvailabilityRule).filter(AvailabilityRule.tutor_id == request.tutor_id)
 
-        # 3. Execute and Sort
-        formatted_results = []
-        for rule, s_id in data_list:
-            formatted_results.append({
-                "slot_id": s_id,
-                "tutor_id": rule.tutor_id,
-                "date": rule.date,
-                "start_time": rule.start_time,
-                "end_time": rule.end_time,
-                "topic": rule.topic,
-                "short_description": rule.short_description
-            })
+    if request.availability_date and request.availability_date.strip() != "":
+        try:
+            parsed_date = datetime.strptime(request.availability_date, "%Y-%m-%d").date()
+            query = query.filter(AvailabilityRule.date == parsed_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format.")
 
-        return {
-            "response_code": "1",
-            "detail": "Successfully retrieved availability list",
-            "data": formatted_results
-        }
+    rules = query.all()
 
-    except HTTPException as e:
-        logger.error(f"Error fetching availability: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+    formatted_data = []
+    for rule in rules:
+        # 2. For each rule, find the EXACT matching slot ID
+        # This prevents the 1-to-many multiplication
+        slot = db.query(TutorSlot.id).filter(
+            TutorSlot.tutor_id == rule.tutor_id,
+            cast(TutorSlot.start_at, Date) == rule.date,
+            cast(TutorSlot.start_at, Time) == rule.start_time
+        ).first()
+
+        formatted_data.append({
+            "slot_id": slot[0] if slot else None,
+            "tutor_id": rule.tutor_id,
+            "availability_date": rule.date,
+            "start_time": rule.start_time,
+            "end_time": rule.end_time,
+            "topic": rule.topic,
+            "short_description": rule.short_description
+        })
+
+    return {
+        "response_code": "1",
+        "detail": "Successfully retrieved availability list",
+        "data": formatted_data
+    }
