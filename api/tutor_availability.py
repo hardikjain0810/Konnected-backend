@@ -121,27 +121,42 @@ def get_tutor_availability(
     """
     try: 
         # 1. Start the Base Query
-        query = db.query(AvailabilityRule).filter(AvailabilityRule.tutor_id == request.tutor_id)
+        results = db.query(AvailabilityRule,TutorSlot.id.label("slot_id")).join(
+            TutorSlot, 
+            (TutorSlot.tutor_id == AvailabilityRule.tutor_id) & 
+            (TutorSlot.start_at.cast(Date) == AvailabilityRule.date)
+        ).filter(AvailabilityRule.tutor_id == request.tutor_id)
 
         # 2. Handle the "empty string" or "missing" logic
         if request.availability_date and request.availability_date.strip() != "":
             try:
                 # Convert the string to a date object manually
                 parsed_date = datetime.strptime(request.availability_date, "%Y-%m-%d").date()
-                query = query.filter(AvailabilityRule.date == parsed_date)
+                results = results.filter(AvailabilityRule.date == parsed_date)
             except ValueError:
                 raise HTTPException(
                     status_code=400, 
                     detail="Invalid date format. Please use YYYY-MM-DD"
                 )
+        data_list  = results.all()
 
         # 3. Execute and Sort
-        availabilities = query.all()
+        formatted_results = []
+        for rule, s_id in data_list:
+            formatted_results.append({
+                "slot_id": s_id,
+                "tutor_id": rule.tutor_id,
+                "date": rule.date,
+                "start_time": rule.start_time,
+                "end_time": rule.end_time,
+                "topic": rule.topic,
+                "short_description": rule.short_description
+            })
 
         return {
             "response_code": "1",
             "detail": "Successfully retrieved availability list",
-            "data": availabilities
+            "data": formatted_results
         }
 
     except HTTPException as e:
