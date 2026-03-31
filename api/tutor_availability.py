@@ -126,9 +126,9 @@ def get_tutor_availability(
         # Apply date filter if provided
         if request.availability_date:
             query = query.filter(AvailabilityRule.date == request.availability_date)
-
+        if not request.availability_date or None:
         # Order by date and then start time for a clean UI experience
-        availabilities = query.order_by(AvailabilityRule.date.asc(), AvailabilityRule.start_time.asc()).all()
+            availabilities = query.order_by(AvailabilityRule.date.asc(), AvailabilityRule.start_time.asc()).all()
 
         return {
             "response_code": "1",
