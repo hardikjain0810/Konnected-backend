@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import Date
+from sqlalchemy import Date, Time, cast
 from datetime import datetime, timedelta, date
 from core.logging_config import get_logger
 from core.utils import get_lang
@@ -122,12 +122,17 @@ def get_tutor_availability(
     """
     try: 
         # 1. Start the Base Query
-        results = db.query(AvailabilityRule,TutorSlot.id.label("slot_id")).join(
-            TutorSlot, 
-            (TutorSlot.tutor_id == AvailabilityRule.tutor_id) & 
-            (TutorSlot.start_at.cast(Date) == AvailabilityRule.date)
-        ).filter(AvailabilityRule.tutor_id == request.tutor_id)
-
+        query = db.query(
+        AvailabilityRule, 
+        TutorSlot.id.label("slot_id")
+        ).join(
+        TutorSlot, 
+        (TutorSlot.tutor_id == AvailabilityRule.tutor_id) & 
+        (cast(TutorSlot.start_at, Date) == AvailabilityRule.date) &
+        (cast(TutorSlot.start_at, Time) == AvailabilityRule.start_time) # Match the time!
+        ).filter(
+        AvailabilityRule.tutor_id == request.tutor_id
+        )
         # 2. Handle the "empty string" or "missing" logic
         if request.availability_date and request.availability_date.strip() != "":
             try:
