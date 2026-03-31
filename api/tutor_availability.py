@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import Date, Time, cast
+from sqlalchemy import Date, Time, cast, and_
 from datetime import datetime, timedelta, date
 from core.logging_config import get_logger
 from core.utils import get_lang
 from typing import Optional, List
+from uuid import UUID
 from db.database import get_db
-from models.database_models import AvailabilityRule, TutorSlot, Booking
+from models.database_models import AvailabilityRule, TutorSlot, Booking, SlotStatus
 from schemas.schemas import AvailabilityRuleCreate, AvailabilityResponse, GetAvailabilityResponse, GetAvailabilityRuleCreate
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
@@ -85,6 +86,7 @@ def set_availability(
 
         db.commit()
         db.refresh(new_rule)
+        db.refresh(new_slot)
         
         return {
             "response_code": "1",
@@ -99,58 +101,70 @@ def set_availability(
     
 @router.post("/list-availability/{tutor_id}", response_model=GetAvailabilityResponse)
 def get_tutor_availability(
+    tutor_id: UUID,
     request: GetAvailabilityRuleCreate,
     db: Session = Depends(get_db)
 ):
     # 1. Get the rules
-    query = db.query(AvailabilityRule).filter(AvailabilityRule.tutor_id == request.tutor_id)
+    query = db.query(AvailabilityRule, TutorSlot).join(
+        TutorSlot, and_(
+            TutorSlot.tutor_id == AvailabilityRule.tutor_id,
+            cast(TutorSlot.start_at, Date) == AvailabilityRule.date,
+            cast(TutorSlot.start_at, Time) == AvailabilityRule.start_time
+        )
+    ).filter(AvailabilityRule.tutor_id == request.tutor_id)
 
-    if request.availability_date and request.availability_date.strip() != "":
+    today = date.today()
+
+    # If a specific date is requested in the body
+    if request.availability_date and str(request.availability_date).strip() != "":
         try:
-            parsed_date = datetime.strptime(request.availability_date, "%Y-%m-%d").date()
-            query = query.filter(AvailabilityRule.date == parsed_date)
+            # Convert to date object if it's a string
+            if isinstance(request.availability_date, str):
+                target_date = datetime.strptime(request.availability_date, "%Y-%m-%d").date()
+            else:
+                target_date = request.availability_date
+            
+            # Validation: Block past dates
+            if target_date < today:
+                raise HTTPException(status_code=400, detail="Cannot retrieve availability for past dates.")
+                
+            query = query.filter(AvailabilityRule.date == target_date)
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date format.")
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+    else:
+        # Default: If no date provided, only show today onwards
+        query = query.filter(AvailabilityRule.date >= today)
 
-    rules = query.all()
+    # 4. Filter only 'open' status from TutorSlot
+    # Replace SlotStatus.open with "open" if you aren't using an Enum
+    query = query.filter(TutorSlot.status == SlotStatus.open)
+
+    results = query.all()
     formatted_data = []
 
-    for rule in rules:
-        # 2. Get the full TutorSlot object
-        slot = db.query(TutorSlot).filter(
-            TutorSlot.tutor_id == rule.tutor_id,
-            cast(TutorSlot.start_at, Date) == rule.date,
-            cast(TutorSlot.start_at, Time) == rule.start_time
-        ).first()
+    for rule, slot in results:
+        # 3. Check Booking table (Optional: Since you only want 'open', 
+        # usually 'open' slots have no bookings, but we'll check to be safe)
+        booking = db.query(Booking).filter(Booking.slot_id == slot.id).first()
+        
+        # If there is a booking, it's technically not 'open' anymore 
+        if booking:
+            continue
 
-        final_status = "open"
-        current_slot_id = None
-
-        if slot:
-            current_slot_id = slot.id
-            # 3. Check Booking table for status
-            booking = db.query(Booking).filter(Booking.slot_id == slot.id).first()
-            
-            if booking:
-                final_status = booking.status.value if hasattr(booking.status, 'value') else booking.status
-            else:
-                # Fallback to slot status (handle Enum if necessary)
-                final_status = slot.status.value if hasattr(slot.status, 'value') else slot.status
-
-        # 4. Construct the dictionary to match GetAvailabilityRuleData
         formatted_data.append({
-            "slot_id": current_slot_id, # FIX: Don't use slot[0]
+            "slot_id": slot.id,
             "tutor_id": rule.tutor_id,
-            "date": rule.date,          # Matches Field(alias="date")
+            "date": rule.date,
             "start_time": rule.start_time,
             "end_time": rule.end_time,
             "topic": rule.topic,
             "short_description": rule.short_description,
-            "status": str(final_status)
+            "status": "open" # Hardcoded as 'open' per your requirement
         })
 
     return {
         "response_code": "1",
-        "detail": "Successfully retrieved availability list",
+        "detail": "Successfully retrieved open availability list",
         "data": formatted_data
     }
