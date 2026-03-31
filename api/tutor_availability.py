@@ -91,6 +91,7 @@ def set_availability(
             temp_start = temp_end # Move to the next 30-min block
 
         db.commit()
+        db.refresh(new_rule)
         
         return {
             "response_code": "1",
@@ -100,7 +101,7 @@ def set_availability(
 
     except Exception as e:
         db.rollback()
-        logger.error({"error":str(e)})
+        logger.error({"error setting availability":str(e)})
         raise HTTPException(status_code=500, detail={"error":str(e)})
     
 @router.post("/list-availability/{tutor_id}", response_model=GetAvailabilityResponse)
