@@ -147,11 +147,11 @@ def get_home_tutors(
     if student is None:
         raise HTTPException(status_code=404, detail="Student doesn't exist.")
     # Query Tutors (Filtering by is_published and Language)
-    tutor_profiles = db.query(TutorProfile).filter(
+    query = db.query(TutorProfile).filter(
         TutorProfile.is_published == True,
         TutorProfile.languages_taught == student.primary_language.value 
     )
-    logger.info(f"Tutors : {tutor_profiles}")
+    logger.info(f"Tutors : {query}")
 
     if request.search and request.search.strip() != "":
         search_term = f"%{request.search}%"
