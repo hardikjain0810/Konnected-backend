@@ -138,13 +138,13 @@ def get_tutor_availability(
             try:
                 # Convert the string to a date object manually
                 parsed_date = datetime.strptime(request.availability_date, "%Y-%m-%d").date()
-                results = results.filter(AvailabilityRule.date == parsed_date)
+                query = query.filter(AvailabilityRule.date == parsed_date)
             except ValueError:
                 raise HTTPException(
                     status_code=400, 
                     detail="Invalid date format. Please use YYYY-MM-DD"
                 )
-        data_list  = results.all()
+        data_list  = query.all()
 
         # 3. Execute and Sort
         formatted_results = []
