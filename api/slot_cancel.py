@@ -11,7 +11,7 @@ from models.database_models import TutorSlot, SlotStatus, AvailabilityRule
 router = APIRouter(prefix="", tags=["tutor"])
 logger = get_logger()
 
-@router.delete("/slots/{slot_id}/cancel", status_code=status.HTTP_204_NO_CONTENT,response_model=CancelSlotResponse)
+@router.delete("/slots/{slot_id}/cancel",response_model=CancelSlotResponse)
 def delete_tutor_slot_and_rule(
     request: CancelSlotCreate, # Pass this as a query param or from request body
     db: Session = Depends(get_db)
