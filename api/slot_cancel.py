@@ -13,7 +13,6 @@ logger = get_logger()
 
 @router.put("/slots/{slot_id}/cancel",response_model=CancelSlotResponse)
 def cancel_and_reopen_slot(
-    slot_id: UUID,
     request: CancelSlotCreate,
     db: Session = Depends(get_db)):
     
@@ -58,6 +57,8 @@ def cancel_and_reopen_slot(
 
         if availability_rule:
             db.delete(availability_rule)
+        else:
+            logger.error("Some error")
 
         # 3. Handle the TutorSlot
         # If your manager wants it GONE from the system, use db.delete(slot)
@@ -68,7 +69,7 @@ def cancel_and_reopen_slot(
         
         return {
             "response_code": "1",
-            "detail": "Slot and Availability Rule deleted successfully.",
+            "detail": "Slot successfully.",
             "data": []
         }
 
