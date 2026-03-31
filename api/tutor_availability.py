@@ -109,7 +109,7 @@ def get_tutor_availability(
     request: GetAvailabilityRuleCreate,
     db: Session = Depends(get_db)
 ):
-    # 1. Get the rules first
+    # 1. Get the rules
     query = db.query(AvailabilityRule).filter(AvailabilityRule.tutor_id == request.tutor_id)
 
     if request.availability_date and request.availability_date.strip() != "":
@@ -120,12 +120,11 @@ def get_tutor_availability(
             raise HTTPException(status_code=400, detail="Invalid date format.")
 
     rules = query.all()
-
     formatted_data = []
+
     for rule in rules:
-        # 2. For each rule, find the EXACT matching slot ID
-        # This prevents the 1-to-many multiplication
-        slot = db.query(TutorSlot.id).filter(
+        # 2. Get the full TutorSlot object
+        slot = db.query(TutorSlot).filter(
             TutorSlot.tutor_id == rule.tutor_id,
             cast(TutorSlot.start_at, Date) == rule.date,
             cast(TutorSlot.start_at, Time) == rule.start_time
@@ -136,20 +135,20 @@ def get_tutor_availability(
 
         if slot:
             current_slot_id = slot.id
-            # Check if a booking exists for this slot
+            # 3. Check Booking table for status
             booking = db.query(Booking).filter(Booking.slot_id == slot.id).first()
             
             if booking:
-                # If booked, show the booking status (e.g., 'confirmed', 'pending')
                 final_status = booking.status 
             else:
-                # If not in booking table, show the slot's own status (e.g., 'open')
+                # Fallback to slot status (handle Enum if necessary)
                 final_status = slot.status.value if hasattr(slot.status, 'value') else slot.status
 
+        # 4. Construct the dictionary to match GetAvailabilityRuleData
         formatted_data.append({
-            "slot_id": slot[0] if slot else None,
+            "slot_id": current_slot_id, # FIX: Don't use slot[0]
             "tutor_id": rule.tutor_id,
-            "availability_date": rule.date,
+            "date": rule.date,          # Matches Field(alias="date")
             "start_time": rule.start_time,
             "end_time": rule.end_time,
             "topic": rule.topic,
