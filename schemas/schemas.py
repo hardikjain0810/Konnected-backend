@@ -100,7 +100,7 @@ class AvailabilityRuleData(BaseModel):
     short_description : str
 
 class AvailabilityResponse(BaseModel):
-    response_code: str = "1"
+    response_code: str 
     detail: str
     data: Optional[AvailabilityRuleData] = None
 

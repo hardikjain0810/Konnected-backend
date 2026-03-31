@@ -133,7 +133,10 @@ def get_tutor_availability(
 
         # If you need to wrap this in your standard response format:
         # (Adjusting based on your AvailabilityResponse schema)
-        return availabilities
+        return {
+            "response_code":"1",
+            "detail":"Successfully displayed list",
+            "data": availabilities}
 
     except Exception as e:
         logger.error(f"Error fetching availability for tutor {tutor_id}: {str(e)}")
