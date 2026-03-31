@@ -1,4 +1,5 @@
 from datetime import datetime
+from fastapi import Query
 from typing import Any, List, Optional
 from datetime import date, time
 from uuid import UUID
@@ -217,7 +218,7 @@ class StudentBookingsResponse(BaseResponse):
 
 class GetAvailabilityRuleCreate(BaseModel):
     tutor_id: UUID
-    availability_date: Optional[str]
+    availability_date: Optional[str] = Query(default=None)
 
 class GetAvailabilityRuleData(BaseModel):
     tutor_id: str
