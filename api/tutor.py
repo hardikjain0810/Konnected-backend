@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.database_models import User, TutorProfile, Language, TutorTopic, RoleType, UserRole, TutorSlot, Booking,AvailabilityRule, Profile
+from models.database_models import User, TutorProfile, Language, TutorTopic, RoleType, UserRole, TutorSlot, AvailabilityRule, Profile
 from schemas.schemas import TutorProfileCreate, TutorProfileResponse, TutorDetailResponse, MarketplaceResponse, GetTutorAvailability, GetTutorAvailabilityResponse, TutorSearchRequest
 from datetime import timezone, datetime
 from core.utils import get_lang
@@ -9,9 +9,8 @@ from core.auth import get_current_user
 from core.logging_config import logger
 from core.translations import get_text
 from core.exceptions import init_exception_handlers
-from typing import List
-from sqlalchemy import and_, asc, func
-from uuid import uuid4, UUID
+from sqlalchemy import asc, func
+from uuid import UUID
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
 

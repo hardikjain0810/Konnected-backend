@@ -4,7 +4,6 @@ from typing import Any, List, Optional, Union
 from datetime import date, time
 from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
-from models.database_models import AvailabilityRule
 from models.database_models import (
     BookingStatus,
     Country,

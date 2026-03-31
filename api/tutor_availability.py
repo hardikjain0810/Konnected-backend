@@ -6,7 +6,6 @@ from core.logging_config import get_logger
 from core.utils import get_lang
 from typing import Optional, List
 from db.database import get_db
-from core.translations import get_text
 from models.database_models import AvailabilityRule, TutorSlot, Booking
 from schemas.schemas import AvailabilityRuleCreate, AvailabilityResponse, GetAvailabilityResponse, GetAvailabilityRuleCreate
 
