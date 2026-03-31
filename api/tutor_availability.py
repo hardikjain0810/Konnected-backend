@@ -120,22 +120,35 @@ def get_tutor_availability(
     If availability_date is provided, filters for that specific day.
     """
     try:
-        # Start the query
+        # 1. Start the Base Query
         query = db.query(AvailabilityRule).filter(AvailabilityRule.tutor_id == request.tutor_id)
 
-        # Apply date filter if provided
-        if request.availability_date:
-            query = query.filter(AvailabilityRule.date == request.availability_date)
-        if not request.availability_date or None:
-        # Order by date and then start time for a clean UI experience
-            availabilities = query.order_by(AvailabilityRule.date.asc(), AvailabilityRule.start_time.asc()).all()
+        # 2. Handle the "empty string" or "missing" logic
+        if request.availability_date and request.availability_date.strip() != "":
+            try:
+                # Convert the string to a date object manually
+                parsed_date = datetime.strptime(request.availability_date, "%Y-%m-%d").date()
+                query = query.filter(AvailabilityRule.date == parsed_date)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Invalid date format. Please use YYYY-MM-DD"
+                )
+
+        # 3. Execute and Sort
+        availabilities = query.order_by(
+            AvailabilityRule.date.asc(), 
+            AvailabilityRule.start_time.asc()
+        ).all()
 
         return {
             "response_code": "1",
-            "detail": "Successfully displayed list",
+            "detail": "Successfully retrieved availability list",
             "data": availabilities
         }
 
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        logger.error(f"Error fetching availability for tutor {request.tutor_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error fetching availability: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
