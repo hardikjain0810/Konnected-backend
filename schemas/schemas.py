@@ -225,7 +225,7 @@ class GetAvailabilityRuleCreate(BaseModel):
     availability_date: Optional[str] = Query(default=None)
 
 class GetAvailabilityRuleData(BaseModel):
-    slot_id: Union[UUID,str]
+    slot_id: Optional[Union[UUID,str]] = None
     tutor_id: Union[UUID,str]
     availability_date: date = Field(alias="date")
     start_time: time
