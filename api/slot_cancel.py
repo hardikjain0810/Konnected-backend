@@ -43,6 +43,7 @@ def delete_tutor_slot(
         # This keeps the 1-4 hour AvailabilityRule intact for other slots
         db.delete(slot)
         db.commit()
+        db.refresh(slot)
 
         return {
             "response_code": "1",
