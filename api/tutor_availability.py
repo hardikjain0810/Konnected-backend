@@ -30,18 +30,18 @@ def set_availability(
             detail=f"You can only set availability up to 21 days in advance (until {max_future_date})"
         )
 
-    # Duration Validation and time integrity
+    # 1. Define start and end
     start_dt = datetime.combine(request.availability_date, request.start_time)
     end_dt = datetime.combine(request.availability_date, request.end_time)
 
-    if end_dt <= start_dt:
-        raise HTTPException(status_code=400, detail="End time must be after start time")
+    # 2. Calculate exact duration in seconds
+    duration_seconds = int((end_dt - start_dt).total_seconds())
 
-    duration_minutes = (end_dt - start_dt).total_seconds() / 60
-    if duration_minutes % 30 != 0:
+    # 3. STRICT CHECK: Must be exactly 30 minutes (1800 seconds)
+    if duration_seconds != 1800:
         raise HTTPException(
             status_code=400, 
-            detail="Duration must be a multiple of 30 minutes (e.g., 30, 60, 90 mins)"
+            detail=f"Invalid duration. You must select exactly 30 minutes. Your selection was {duration_seconds // 60} minutes."
         )
     
     # Overlap validation
@@ -66,29 +66,22 @@ def set_availability(
             short_description=request.short_description
         )
         db.add(new_rule)
-
-        # Generate the 30-minute Slots
-        # This "carves" a 60-min window into two 30-min entries
-        temp_start = start_dt
-        while temp_start + timedelta(minutes=30) <= end_dt:
-            temp_end = temp_start + timedelta(minutes=30)
             
-            # Check for overlaps to avoid UniqueConstraint errors
-            exists = db.query(TutorSlot).filter(
-                TutorSlot.tutor_id == request.tutor_id,
-                TutorSlot.start_at == temp_start
-            ).first()
+        # Check for overlaps to avoid UniqueConstraint errors
+        exists = db.query(TutorSlot).filter(
+            TutorSlot.tutor_id == request.tutor_id,
+            TutorSlot.start_at == start_dt
+        ).first()
 
-            if not exists:
-                new_slot = TutorSlot(
-                    tutor_id=request.tutor_id,
-                    start_at=temp_start,
-                    end_at=temp_end,
-                    status="open"
-                )
-                db.add(new_slot)
-            
-            temp_start = temp_end # Move to the next 30-min block
+        if not exists:
+            new_slot = TutorSlot(
+                tutor_id=request.tutor_id,
+                start_at=start_dt,
+                end_at=end_dt,
+                status="open"
+            )
+            db.add(new_slot)
+        
 
         db.commit()
         db.refresh(new_rule)
