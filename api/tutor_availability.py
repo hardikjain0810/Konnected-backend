@@ -119,7 +119,7 @@ def get_tutor_availability(
     Fetch all availability rules for a specific tutor.
     If availability_date is provided, filters for that specific day.
     """
-    try:
+    try: 
         # 1. Start the Base Query
         query = db.query(AvailabilityRule).filter(AvailabilityRule.tutor_id == request.tutor_id)
 
@@ -136,10 +136,7 @@ def get_tutor_availability(
                 )
 
         # 3. Execute and Sort
-        availabilities = query.order_by(
-            AvailabilityRule.date.asc(), 
-            AvailabilityRule.start_time.asc()
-        ).all()
+        availabilities = query.all()
 
         return {
             "response_code": "1",
@@ -147,8 +144,6 @@ def get_tutor_availability(
             "data": availabilities
         }
 
-    except HTTPException as he:
-        raise he
-    except Exception as e:
+    except HTTPException as e:
         logger.error(f"Error fetching availability: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal Server Error")

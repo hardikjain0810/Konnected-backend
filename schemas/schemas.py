@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import Query
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 from datetime import date, time
 from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
@@ -221,7 +221,7 @@ class GetAvailabilityRuleCreate(BaseModel):
     availability_date: Optional[str] = Query(default=None)
 
 class GetAvailabilityRuleData(BaseModel):
-    tutor_id: str
+    tutor_id: Union[UUID,str]
     availability_date: date = Field(alias="date")
     start_time: time
     end_time: time
