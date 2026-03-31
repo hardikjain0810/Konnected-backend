@@ -131,12 +131,11 @@ def get_tutor_availability(
         # Order by date and then start time for a clean UI experience
         availabilities = query.order_by(AvailabilityRule.date.asc(), AvailabilityRule.start_time.asc()).all()
 
-        # If you need to wrap this in your standard response format:
-        # (Adjusting based on your AvailabilityResponse schema)
         return {
-            "response_code":"1",
-            "detail":"Successfully displayed list",
-            "data": availabilities}
+        "response_code": "1",
+        "detail": "Successfully displayed list",
+        "data": availabilities
+    }
 
     except Exception as e:
         logger.error(f"Error fetching availability for tutor {tutor_id}: {str(e)}")
