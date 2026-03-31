@@ -41,8 +41,9 @@ def delete_tutor_slot_and_rule(
         # 3. Perform Deletions
         if availability_rule:
             db.delete(availability_rule)
+            db.delete(slot)
         
-        db.delete(slot)
+        
 
         # 4. Commit as a single transaction
         db.commit()
