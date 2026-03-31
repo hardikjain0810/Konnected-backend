@@ -197,13 +197,14 @@ class CancelSlotCreate(BaseModel):
     tutor_id: UUID
     slot_id: UUID
 
-class CancelSlotData(BaseResponse):
+class CancelSlotData(BaseModel): 
     tutor_id: UUID
     slot_id: UUID
 
-class CancelSlotResponse(BaseResponse):
+class CancelSlotResponse(BaseModel): 
+    response_code: str
+    detail: str
     data: List[CancelSlotData]
-
 class StudentBookingCreate(BaseModel):
     student_id: str
 
