@@ -139,7 +139,7 @@ def get_tutor_availability(
             booking = db.query(Booking).filter(Booking.slot_id == slot.id).first()
             
             if booking:
-                final_status = booking.status 
+                final_status = booking.status.value if hasattr(booking.status, 'value') else booking.status
             else:
                 # Fallback to slot status (handle Enum if necessary)
                 final_status = slot.status.value if hasattr(slot.status, 'value') else slot.status
