@@ -138,20 +138,27 @@ async def update_tutor_profile(
     }
 
 # API to recommend tutors in student profile.
-@router.get("/recommended", response_model=MarketplaceResponse)
+@router.post("/recommended", response_model=MarketplaceResponse)
 def get_home_tutors(
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)):
+    request: TutorSearchRequest,
+    db: Session = Depends(get_db)):
     # Get student's target language
-    student = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+    student = db.query(Profile).filter(Profile.user_id == request.student_id).first()
     if student is None:
-        raise HTTPException(status_code=401, detail="User doesn't exist.")
+        raise HTTPException(status_code=404, detail="Student doesn't exist.")
     # Query Tutors (Filtering by is_published and Language)
     tutor_profiles = db.query(TutorProfile).filter(
         TutorProfile.is_published == True,
         TutorProfile.languages_taught == student.primary_language.value 
-    ).all()
+    )
     logger.info(f"Tutors : {tutor_profiles}")
+
+    if request.search and request.search.strip() != "":
+        search_term = f"%{request.search}%"
+        query = query.filter(TutorProfile.name.ilike(search_term))
+
+    tutor_profiles = query.all()
+
     results = []
     current_time = datetime.now(timezone.utc)
     for profile in tutor_profiles:

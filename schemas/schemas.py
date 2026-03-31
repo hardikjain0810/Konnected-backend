@@ -112,6 +112,10 @@ class TutorRecommendation(BaseModel):
     topics: List[str]        
     next_slot: Optional[datetime] = None
 
+class TutorSearchRequest(BaseModel):
+    student_id: str
+    search: Optional[str] = ""
+
 class TutorDataWrapper(BaseModel):
     tutors: List[TutorRecommendation]
     
@@ -238,3 +242,6 @@ class GetAvailabilityResponse(BaseResponse):
     detail: str
     data: List[GetAvailabilityRuleData] = None
 
+class TutorSearchRequest(BaseModel):
+    student_id: str
+    search: Optional[str] = ""
