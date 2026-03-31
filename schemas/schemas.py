@@ -215,4 +215,20 @@ class StudentBookingsResponse(BaseResponse):
     detail: str
     data: List[StudentBookingDetail]
 
+class GetAvailabilityRuleCreate(BaseModel):
+    tutor_id: str
+    availability_date: date
+
+class GetAvailabilityRuleData(BaseModel):
+    tutor_id: str
+    availability_date: date = Field(alias="date")
+    start_time: time
+    end_time: time
+    topic: str
+    short_description : str
+
+class GetAvailabilityResponse(BaseResponse):
+    response_code: str 
+    detail: str
+    data: List[AvailabilityRuleData] = None
 

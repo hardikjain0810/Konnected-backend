@@ -7,7 +7,7 @@ from typing import Optional, List
 from db.database import get_db
 from core.translations import get_text
 from models.database_models import AvailabilityRule, TutorSlot
-from schemas.schemas import AvailabilityRuleCreate, AvailabilityResponse
+from schemas.schemas import AvailabilityRuleCreate, AvailabilityResponse, GetAvailabilityResponse, GetAvailabilityRuleCreate
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
 logger = get_logger()
@@ -110,10 +110,9 @@ def set_availability(
         logger.error({"error":str(e)})
         raise HTTPException(status_code=500, detail={"error":str(e)})
     
-@router.get("/availability/{tutor_id}", response_model=AvailabilityResponse)
+@router.get("/availability/{tutor_id}", response_model=GetAvailabilityResponse)
 def get_tutor_availability(
-    tutor_id: str,
-    availability_date: Optional[date] = Query(None),
+    request: GetAvailabilityRuleCreate,
     db: Session = Depends(get_db)
 ):
     """
@@ -122,11 +121,11 @@ def get_tutor_availability(
     """
     try:
         # Start the query
-        query = db.query(AvailabilityRule).filter(AvailabilityRule.tutor_id == tutor_id)
+        query = db.query(AvailabilityRule).filter(AvailabilityRule.tutor_id == request.tutor_id)
 
         # Apply date filter if provided
-        if availability_date:
-            query = query.filter(AvailabilityRule.date == availability_date)
+        if request.availability_date:
+            query = query.filter(AvailabilityRule.date == request.availability_date)
 
         # Order by date and then start time for a clean UI experience
         availabilities = query.order_by(AvailabilityRule.date.asc(), AvailabilityRule.start_time.asc()).all()
@@ -138,5 +137,5 @@ def get_tutor_availability(
         }
 
     except Exception as e:
-        logger.error(f"Error fetching availability for tutor {tutor_id}: {str(e)}")
+        logger.error(f"Error fetching availability for tutor {request.tutor_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
