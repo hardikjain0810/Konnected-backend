@@ -139,4 +139,4 @@ def get_tutor_availability(
 
     except Exception as e:
         logger.error(f"Error fetching availability for tutor {tutor_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=500, detail=str(e))
