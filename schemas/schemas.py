@@ -246,3 +246,4 @@ class GetAvailabilityResponse(BaseResponse):
 class TutorSearchRequest(BaseModel):
     student_id: str
     search: Optional[str] = ""
+    match_language: bool = False
