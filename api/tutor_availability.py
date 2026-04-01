@@ -82,6 +82,9 @@ def set_availability(
                 status="open"
             )
             db.add(new_slot)
+        else:
+            exists.status = "open"
+            new_slot = exists
         
 
         db.commit()
