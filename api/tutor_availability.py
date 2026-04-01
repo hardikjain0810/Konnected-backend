@@ -46,18 +46,37 @@ def set_availability(
         )
     
     # Overlap validation
-    overlapping_rule = db.query(AvailabilityRule).filter(
+    conflict = db.query(AvailabilityRule).join(
+        TutorSlot, 
+        and_(
+            TutorSlot.tutor_id == AvailabilityRule.tutor_id,
+            cast(TutorSlot.start_at, Date) == AvailabilityRule.date,
+            cast(TutorSlot.start_at, Time) == AvailabilityRule.start_time
+        )
+    ).filter(
         AvailabilityRule.tutor_id == request.tutor_id,
         AvailabilityRule.date == request.availability_date,
-        AvailabilityRule.start_time < request.end_time,  # S1 < E2
-        AvailabilityRule.end_time > request.start_time   # E1 > S2
+        AvailabilityRule.start_time < request.end_time,
+        AvailabilityRule.end_time > request.start_time,
+        TutorSlot.status == "open"
     ).first()
 
-    if overlapping_rule:
-        raise HTTPException(status_code=400, detail=f"Conflict: You already have availability set from {overlapping_rule.start_time} to {overlapping_rule.end_time}")
+    if conflict:
+        raise HTTPException(status_code=400, detail="An active 30-minute slot already exists here.")
 
     try:
-        # Save the main Availability Rule
+        # 3. Clean up any "Dead" rules first (to prevent Duplicate Key errors)
+        # If a rule exists but the slot was disabled, delete the old rule to make room for the new one.
+        old_rule = db.query(AvailabilityRule).filter(
+            AvailabilityRule.tutor_id == request.tutor_id,
+            AvailabilityRule.date == request.availability_date,
+            AvailabilityRule.start_time == request.start_time
+        ).first()
+        if old_rule:
+            db.delete(old_rule)
+            db.flush() # Sync the deletion before adding new_rule
+
+        # 4. Create new Rule
         new_rule = AvailabilityRule(
             tutor_id=request.tutor_id,
             date=request.availability_date,
@@ -67,40 +86,38 @@ def set_availability(
             short_description=request.short_description
         )
         db.add(new_rule)
-            
-        # Check for overlaps to avoid UniqueConstraint errors
-        exists = db.query(TutorSlot).filter(
+
+        # 5. Handle Slot (Create or Re-enable)
+        slot = db.query(TutorSlot).filter(
             TutorSlot.tutor_id == request.tutor_id,
             TutorSlot.start_at == start_dt
         ).first()
 
-        if not exists:
-            new_slot = TutorSlot(
+        if not slot:
+            slot = TutorSlot(
                 tutor_id=request.tutor_id,
                 start_at=start_dt,
                 end_at=end_dt,
                 status="open"
             )
-            db.add(new_slot)
+            db.add(slot)
         else:
-            exists.status = "open"
-            new_slot = exists
-        
+            slot.status = "open" # Re-enable the disabled slot
+            slot.end_at = end_dt # Ensure times are updated
 
         db.commit()
         db.refresh(new_rule)
-        db.refresh(new_slot)
         
         return {
             "response_code": "1",
-            "detail": "Availability and 30-minute slots generated successfully!",
+            "detail": "Availability and slot synchronized successfully!",
             "data": [new_rule]
         }
 
     except Exception as e:
         db.rollback()
-        logger.error({"error setting availability":str(e)})
-        raise HTTPException(status_code=500, detail={"error":str(e)})
+        logger.error(f"Critical Failure: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
     
 @router.post("/list-availability/{tutor_id}", response_model=GetAvailabilityResponse)
 def get_tutor_availability(
