@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 from core.logging_config import get_logger
 from core.utils import get_lang
@@ -9,7 +10,6 @@ from core.translations import get_text
 from models.database_models import TutorSlot, SlotStatus, BookingStatus, Booking
 from schemas.schemas import SlotBookingCreate, SlotBookingResponse
 import uuid
-from core.auth import get_current_user
 from fastapi.encoders import jsonable_encoder
 
 router = APIRouter(prefix="", tags=["tutor"])
@@ -35,14 +35,14 @@ def create_booking(request: SlotBookingCreate,
     requested_slot = db.query(TutorSlot).filter(
         TutorSlot.tutor_id == request.tutor_id,
         TutorSlot.start_at == start_at,
-        TutorSlot.status != SlotStatus.disabled
+        TutorSlot.status == SlotStatus.open
     ).with_for_update().first()
 
     # Suggestion Logic (If exact slot is missing or taken)
     if not requested_slot:
         nearest_slot = db.query(TutorSlot).filter(
             TutorSlot.tutor_id == request.tutor_id,
-            TutorSlot.status != SlotStatus.open,
+            TutorSlot.status == SlotStatus.open,
             TutorSlot.start_at > start_at
         ).order_by(TutorSlot.start_at.asc()).first()
 
@@ -90,9 +90,16 @@ def create_booking(request: SlotBookingCreate,
             }
         }
         
+    except IntegrityError as e:
+        db.rollback()
+        logger.warning(f"Booking conflict for slot {requested_slot.id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Slot unavailable. It may have just been booked by another student."
+        )
     except Exception as e:
         db.rollback() # Undo changes if anything fails (e.g., DB connection drop)
-        print(f"Error during booking: {e}")
+        logger.error(f"Error during booking: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error while processing booking."
