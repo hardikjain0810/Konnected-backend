@@ -119,6 +119,7 @@ class TutorRecommendation(BaseModel):
 class TutorSearchRequest(BaseModel):
     student_id: str
     search: Optional[str] = ""
+    match_language: str
 
 class TutorDataWrapper(BaseModel):
     tutors: List[TutorRecommendation]
