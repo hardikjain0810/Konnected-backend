@@ -35,14 +35,14 @@ def create_booking(request: SlotBookingCreate,
     requested_slot = db.query(TutorSlot).filter(
         TutorSlot.tutor_id == request.tutor_id,
         TutorSlot.start_at == start_at,
-        TutorSlot.status == SlotStatus.open
+        TutorSlot.status.in_([SlotStatus.open, SlotStatus.booked])
     ).with_for_update().first()
 
     # Suggestion Logic (If exact slot is missing or taken)
     if not requested_slot:
         nearest_slot = db.query(TutorSlot).filter(
             TutorSlot.tutor_id == request.tutor_id,
-            TutorSlot.status == SlotStatus.open,
+            TutorSlot.status.in_([SlotStatus.open, SlotStatus.booked]),
             TutorSlot.start_at > start_at
         ).order_by(TutorSlot.start_at.asc()).first()
 
@@ -54,18 +54,6 @@ def create_booking(request: SlotBookingCreate,
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=jsonable_encoder(error_details)
-        )
-
-    # Guard against stale data: slot is open but booking already exists for this slot.
-    existing_booking = db.query(Booking).filter(
-        Booking.slot_id == requested_slot.id
-    ).first()
-    if existing_booking:
-        requested_slot.status = SlotStatus.booked
-        db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Slot unavailable. It is already booked."
         )
 
     # Atomic Transaction: Create Booking & Update Slot
@@ -82,8 +70,8 @@ def create_booking(request: SlotBookingCreate,
             ends_at=requested_slot.end_at
         )
         
-        # Mark the Slot as closed/booked so it disappears from search
-        requested_slot.status = SlotStatus.booked # 
+        # Keep slot in booked state once first booking is created.
+        requested_slot.status = SlotStatus.booked
         
         db.add(new_booking)
         db.commit() # Save both changes at once
@@ -104,21 +92,10 @@ def create_booking(request: SlotBookingCreate,
         
     except IntegrityError as e:
         db.rollback()
-        # If unique constraint failed, synchronize slot status with booking truth.
-        existing_booking = db.query(Booking).filter(
-            Booking.slot_id == requested_slot.id
-        ).first()
-        if existing_booking:
-            slot_to_sync = db.query(TutorSlot).filter(
-                TutorSlot.id == requested_slot.id
-            ).first()
-            if slot_to_sync and slot_to_sync.status != SlotStatus.booked:
-                slot_to_sync.status = SlotStatus.booked
-                db.commit()
         logger.warning(f"Booking conflict for slot {requested_slot.id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Slot unavailable. It may have just been booked by another student."
+            detail="Booking failed due to database slot uniqueness. Remove unique constraint on bookings.slot_id to allow multiple students per slot."
         )
     except Exception as e:
         db.rollback() # Undo changes if anything fails (e.g., DB connection drop)

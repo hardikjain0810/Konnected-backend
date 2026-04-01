@@ -151,7 +151,7 @@ class Booking(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tutor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     student_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    slot_id = Column(UUID(as_uuid=True), ForeignKey("tutor_slots.id"), unique=True)
+    slot_id = Column(UUID(as_uuid=True), ForeignKey("tutor_slots.id"))
 
     status = Column(Enum(BookingStatus))
     goal = str
