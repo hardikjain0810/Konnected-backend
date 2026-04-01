@@ -165,7 +165,7 @@ def get_tutor_availability(
 
     # 4. Filter only 'open' status from TutorSlot
     # Replace SlotStatus.open with "open" if you aren't using an Enum
-    query = query.filter(TutorSlot.status == SlotStatus.open)
+    query = query.filter(TutorSlot.status != SlotStatus.disabled)
 
     results = query.all()
     formatted_data = []
@@ -175,9 +175,13 @@ def get_tutor_availability(
         # usually 'open' slots have no bookings, but we'll check to be safe)
         booking = db.query(Booking).filter(Booking.slot_id == slot.id).first()
         
-        # If there is a booking, it's technically not 'open' anymore 
+        # Determine status dynamically 
         if booking:
-            continue
+            # If a booking exists, use the booking status (e.g., "confirmed", "booked")
+            current_status = booking.status.value if hasattr(booking.status, 'value') else str(booking.status)
+        else:
+            # Otherwise, use the slot status (usually "open")
+            current_status = slot.status.value if hasattr(slot.status, 'value') else str(slot.status)
 
         formatted_data.append({
             "slot_id": slot.id,
