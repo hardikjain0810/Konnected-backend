@@ -33,6 +33,17 @@ def set_availability(
     start_dt = datetime.combine(request.availability_date, request.start_time)
     end_dt = datetime.combine(request.availability_date, request.end_time)
 
+    # Hard guard: if this exact slot is already booked, do not allow re-adding availability.
+    existing_slot = db.query(TutorSlot).filter(
+        TutorSlot.tutor_id == request.tutor_id,
+        TutorSlot.start_at == start_dt
+    ).first()
+    if existing_slot and existing_slot.status == SlotStatus.booked:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot set availability for this time. The slot is already booked."
+        )
+
     # 2. Calculate exact duration in seconds
     duration_seconds = int((end_dt - start_dt).total_seconds())
 
