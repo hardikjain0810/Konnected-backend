@@ -250,6 +250,17 @@ class GetAvailabilityResponse(BaseResponse):
     detail: str
     data: List[GetAvailabilityRuleData] = None
 
+class TutorAvailabilitySlotData(BaseModel):
+    tutor_id: Union[UUID, str]
+    date: date
+    start_time: time
+    end_time: time
+
+class TutorAvailabilitySlotResponse(BaseResponse):
+    response_code: str
+    detail: str
+    data: List[TutorAvailabilitySlotData]
+
 class TutorSearchRequest(BaseModel):
     student_id: str
     search: Optional[str] = ""
