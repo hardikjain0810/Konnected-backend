@@ -56,6 +56,18 @@ def create_booking(request: SlotBookingCreate,
             detail=jsonable_encoder(error_details)
         )
 
+    # Guard against stale data: slot is open but booking already exists for this slot.
+    existing_booking = db.query(Booking).filter(
+        Booking.slot_id == requested_slot.id
+    ).first()
+    if existing_booking:
+        requested_slot.status = SlotStatus.booked
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Slot unavailable. It is already booked."
+        )
+
     # Atomic Transaction: Create Booking & Update Slot
     try:
         # Create the Booking record with 'scheduled' status
@@ -92,6 +104,17 @@ def create_booking(request: SlotBookingCreate,
         
     except IntegrityError as e:
         db.rollback()
+        # If unique constraint failed, synchronize slot status with booking truth.
+        existing_booking = db.query(Booking).filter(
+            Booking.slot_id == requested_slot.id
+        ).first()
+        if existing_booking:
+            slot_to_sync = db.query(TutorSlot).filter(
+                TutorSlot.id == requested_slot.id
+            ).first()
+            if slot_to_sync and slot_to_sync.status != SlotStatus.booked:
+                slot_to_sync.status = SlotStatus.booked
+                db.commit()
         logger.warning(f"Booking conflict for slot {requested_slot.id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
