@@ -110,6 +110,27 @@ async def update_profile(
         }
     }
 
+@router.get("/get-profile/{user_id}", response_model=ProfileResponse)
+async def get_profile_by_user_id(user_id: UUID, db: Session = Depends(get_db)):
+    profile = db.query(Profile).filter(Profile.user_id == user_id).first()
+
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    return {
+        "response_code": "1",
+        "detail": "Profile fetched successfully",
+        "data": {
+            "user_id": str(profile.user_id),
+            "display_name": profile.display_name,
+            "timezone": profile.timezone.value,
+            "primary_language": profile.primary_language.value,
+            "target_language": profile.target_language.value,
+            "interests": profile.interests,
+            "bio": profile.bio
+        }
+    }
+
 @router.get("/my-sessions", response_model=StudentBookingsResponse)
 def get_student_sessions(
     request: StudentBookingCreate,

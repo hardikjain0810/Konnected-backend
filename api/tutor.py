@@ -225,6 +225,28 @@ async def get_tutor_bookings(request: GetTutorAvailability,
         logger.error({"error":str(e)})
         raise HTTPException(status_code=500, detail={"error":str(e)}) 
 
+@router.get("/get-profile/{tutor_id}", response_model=TutorProfileResponse)
+async def get_tutor_profile_by_id(tutor_id: UUID, db: Session = Depends(get_db)):
+    tutor_profile = db.query(TutorProfile).filter(TutorProfile.user_id == tutor_id).first()
+
+    if not tutor_profile:
+        raise HTTPException(status_code=404, detail="Tutor profile not found")
+
+    return {
+        "response_code": "1",
+        "detail": "Tutor profile fetched successfully",
+        "data": {
+            "user_id": str(tutor_profile.user_id),
+            "name": tutor_profile.name,
+            "headline": tutor_profile.headline,
+            "bio": tutor_profile.bio,
+            "languages_taught": tutor_profile.languages_taught,
+            "languages_spoken": tutor_profile.languages_spoken,
+            "topics": tutor_profile.topics,
+            "is_published": tutor_profile.is_published
+        }
+    }
+
 @router.get("/{tutor_id}", response_model=TutorDetailResponse)
 async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
     # Fetch only from TutorProfile
