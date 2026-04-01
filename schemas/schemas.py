@@ -127,6 +127,7 @@ class TutorDataWrapper(BaseModel):
 class MarketplaceResponse(BaseResponse):
     response_code: str
     detail: str
+    match_language: bool = False
     data: TutorDataWrapper   
 
 class SlotSchema(BaseModel):
