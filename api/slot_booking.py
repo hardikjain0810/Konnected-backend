@@ -35,14 +35,14 @@ def create_booking(request: SlotBookingCreate,
     requested_slot = db.query(TutorSlot).filter(
         TutorSlot.tutor_id == request.tutor_id,
         TutorSlot.start_at == start_at,
-        TutorSlot.status == SlotStatus.open
+        TutorSlot.status != SlotStatus.disabled
     ).with_for_update().first()
 
     # Suggestion Logic (If exact slot is missing or taken)
     if not requested_slot:
         nearest_slot = db.query(TutorSlot).filter(
             TutorSlot.tutor_id == request.tutor_id,
-            TutorSlot.status == SlotStatus.open,
+            TutorSlot.status != SlotStatus.open,
             TutorSlot.start_at > start_at
         ).order_by(TutorSlot.start_at.asc()).first()
 
@@ -71,7 +71,7 @@ def create_booking(request: SlotBookingCreate,
         )
         
         # Mark the Slot as closed/booked so it disappears from search
-        requested_slot.status = SlotStatus.booked 
+        requested_slot.status = SlotStatus.booked # 
         
         db.add(new_booking)
         db.commit() # Save both changes at once

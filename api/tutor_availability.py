@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import Date, Time, cast, and_
+from sqlalchemy import Date, Time, cast, and_, or_
 from datetime import datetime, timedelta, date
 from core.logging_config import get_logger
 from uuid import UUID
 from db.database import get_db
-from models.database_models import AvailabilityRule, TutorSlot
+from models.database_models import AvailabilityRule, TutorSlot, SlotStatus
 from schemas.schemas import AvailabilityRuleCreate, AvailabilityResponse, GetAvailabilityResponse, GetAvailabilityRuleCreate
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
@@ -141,6 +141,14 @@ def get_tutor_availability(
             cast(TutorSlot.start_at, Time) == AvailabilityRule.start_time
         )
     ).filter(AvailabilityRule.tutor_id == tutor_id)
+
+    # Exclude only disabled slots; keep open/booked and rules without a slot row.
+    query = query.filter(
+        or_(
+            TutorSlot.id.is_(None),
+            TutorSlot.status != SlotStatus.disabled
+        )
+    )
 
     if request.availability_date is not None and str(request.availability_date).strip() != "":
         try:
