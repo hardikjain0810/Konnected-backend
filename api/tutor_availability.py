@@ -111,7 +111,14 @@ def set_availability(
         return {
             "response_code": "1",
             "detail": "Availability and slot synchronized successfully!",
-            "data": [new_rule]
+            "data": {
+                "tutor_id":new_rule.tutor_id,
+                "availability_date": new_rule.date,
+                "start_time": new_rule.start_time,
+                "end_time": new_rule.end_time,
+                "topic": new_rule.topic,
+                "short_description" : new_rule.short_description
+            }
         }
 
     except Exception as e:
