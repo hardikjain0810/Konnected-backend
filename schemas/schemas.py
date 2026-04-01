@@ -124,7 +124,7 @@ class TutorSearchRequest(BaseModel):
 class TutorDataWrapper(BaseModel):
     tutors: List[TutorRecommendation]
     
-class MarketplaceResponse(BaseResponse):
+class MarketplaceResponse(BaseModel):
     response_code: str
     detail: str
     match_language: bool = False
