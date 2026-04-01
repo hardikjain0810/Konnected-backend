@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import Date, Time, cast, and_
 from datetime import datetime, timedelta, date
 from core.logging_config import get_logger
+from core.utils import get_lang
+from typing import Optional, List
 from uuid import UUID
 from db.database import get_db
-from models.database_models import AvailabilityRule, TutorSlot
-from schemas.schemas import AvailabilityRuleCreate, AvailabilityResponse, TutorAvailabilitySlotResponse
+from models.database_models import AvailabilityRule, TutorSlot, Booking, SlotStatus
+from schemas.schemas import AvailabilityRuleCreate, AvailabilityResponse, GetAvailabilityResponse, GetAvailabilityRuleCreate
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
 logger = get_logger()
@@ -124,30 +126,72 @@ def set_availability(
         logger.error(f"Critical Failure: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
     
-@router.post("/list-availability/{tutor_id}", response_model=TutorAvailabilitySlotResponse)
+@router.post("/list-availability/{tutor_id}", response_model=GetAvailabilityResponse)
 def get_tutor_availability(
     tutor_id: UUID,
+    request: GetAvailabilityRuleCreate,
     db: Session = Depends(get_db)
 ):
-    rules = db.query(AvailabilityRule).filter(
-        AvailabilityRule.tutor_id == tutor_id
-    ).order_by(
-        AvailabilityRule.date.asc(),
-        AvailabilityRule.start_time.asc()
-    ).all()
+    # 1. Get the rules
+    query = db.query(AvailabilityRule, TutorSlot).join(
+        TutorSlot, and_(
+            TutorSlot.tutor_id == AvailabilityRule.tutor_id,
+            cast(TutorSlot.start_at, Date) == AvailabilityRule.date,
+            cast(TutorSlot.start_at, Time) == AvailabilityRule.start_time
+        )
+    ).filter(AvailabilityRule.tutor_id == request.tutor_id)
 
-    formatted_data = [
-        {
+    today = date.today()
+
+    # If a specific date is requested in the body
+    if request.availability_date and str(request.availability_date).strip() != "":
+        try:
+            # Convert to date object if it's a string
+            if isinstance(request.availability_date, str):
+                target_date = datetime.strptime(request.availability_date, "%Y-%m-%d").date()
+            else:
+                target_date = request.availability_date
+            
+            # Validation: Block past dates
+            if target_date < today:
+                raise HTTPException(status_code=400, detail="Cannot retrieve availability for past dates.")
+                
+            query = query.filter(AvailabilityRule.date == target_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+    else:
+        # Default: If no date provided, only show today onwards
+        query = query.filter(AvailabilityRule.date >= today)
+
+    # 4. Filter only 'open' status from TutorSlot
+    # Replace SlotStatus.open with "open" if you aren't using an Enum
+    query = query.filter(TutorSlot.status != SlotStatus.disabled)
+
+    results = query.all()
+    formatted_data = []
+
+    for rule, slot in results:
+        # 3. Check Booking table (Optional: Since you only want 'open', 
+        # usually 'open' slots have no bookings, but we'll check to be safe)
+        booking = db.query(Booking).filter(Booking.slot_id == slot.id).first()
+        
+        # If there is a booking, it's technically not 'open' anymore 
+        if booking:
+            continue
+
+        formatted_data.append({
+            "slot_id": slot.id,
             "tutor_id": rule.tutor_id,
             "date": rule.date,
             "start_time": rule.start_time,
             "end_time": rule.end_time,
-        }
-        for rule in rules
-    ]
+            "topic": rule.topic,
+            "short_description": rule.short_description,
+            "status": "open" # Hardcoded as 'open' per your requirement
+        })
 
     return {
         "response_code": "1",
-        "detail": "Successfully retrieved availability list",
+        "detail": "Successfully retrieved open availability list",
         "data": formatted_data
     }
