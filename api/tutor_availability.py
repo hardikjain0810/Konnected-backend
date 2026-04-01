@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import Date, Time, cast, and_, or_
 from datetime import datetime, timedelta, date
 from core.logging_config import get_logger
+from core.utils import get_lang
+from core.translations import get_text
 from uuid import UUID
 from db.database import get_db
 from models.database_models import AvailabilityRule, TutorSlot, SlotStatus
@@ -14,19 +16,21 @@ logger = get_logger()
 @router.post("/availability", response_model=AvailabilityResponse)
 def set_availability(
     request: AvailabilityRuleCreate,
+    req: Request,
     db: Session = Depends(get_db),
 ):
+    lang = get_lang(req)
     # Date Range Validation (The 21-Day Rule)
     today = date.today()
     max_future_date = today + timedelta(days=21)
 
     if request.availability_date < today:
-        raise HTTPException(status_code=400, detail="Cannot set availability for a past date")
+        raise HTTPException(status_code=400, detail=get_text("cannot_set_past_availability", lang))
     
     if request.availability_date > max_future_date:
         raise HTTPException(
             status_code=400, 
-            detail=f"You can only set availability up to 21 days in advance (until {max_future_date})"
+            detail=get_text("availability_21_day_limit", lang, max_future_date=max_future_date)
         )
 
     # 1. Define start and end
@@ -41,7 +45,7 @@ def set_availability(
     if existing_slot and existing_slot.status == SlotStatus.booked:
         raise HTTPException(
             status_code=409,
-            detail="Cannot set availability for this time. The slot is already booked."
+            detail=get_text("availability_already_booked", lang)
         )
 
     # 2. Calculate exact duration in seconds
@@ -51,7 +55,7 @@ def set_availability(
     if duration_seconds != 1800:
         raise HTTPException(
             status_code=400, 
-            detail=f"Invalid duration. You must select exactly 30 minutes. Your selection was {duration_seconds // 60} minutes."
+            detail=get_text("availability_invalid_duration", lang, minutes=duration_seconds // 60)
         )
     
     # Overlap validation
@@ -71,7 +75,7 @@ def set_availability(
     ).first()
 
     if conflict:
-        raise HTTPException(status_code=400, detail="An active 30-minute slot already exists here.")
+        raise HTTPException(status_code=400, detail=get_text("availability_overlap", lang))
 
     try:
         # 3. Clean up any "Dead" rules first (to prevent Duplicate Key errors)
@@ -119,7 +123,7 @@ def set_availability(
         
         return {
             "response_code": "1",
-            "detail": "Availability and slot synchronized successfully!",
+            "detail": get_text("availability_sync_success", lang),
             "data": {
                 "tutor_id":new_rule.tutor_id,
                 "availability_date": new_rule.date,
@@ -133,16 +137,18 @@ def set_availability(
     except Exception as e:
         db.rollback()
         logger.error(f"Critical Failure: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=500, detail=get_text("availability_internal_error", lang))
     
 @router.post("/list-availability/{tutor_id}", response_model=GetAvailabilityResponse)
 def get_tutor_availability(
     tutor_id: UUID,
+    req: Request,
     request: GetAvailabilityRuleCreate = Depends(),
     db: Session = Depends(get_db)
 ):
+    lang = get_lang(req)
     if request.tutor_id != tutor_id:
-        raise HTTPException(status_code=400, detail="Path tutor_id and params tutor_id must match.")
+        raise HTTPException(status_code=400, detail=get_text("availability_tutor_id_mismatch", lang))
 
     query = db.query(AvailabilityRule, TutorSlot).outerjoin(
         TutorSlot,
@@ -166,7 +172,7 @@ def get_tutor_availability(
             target_date = datetime.strptime(request.availability_date, "%Y-%m-%d").date()
             query = query.filter(AvailabilityRule.date == target_date)
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+            raise HTTPException(status_code=400, detail=get_text("invalid_date_format", lang))
 
     results = query.order_by(AvailabilityRule.date.asc(), AvailabilityRule.start_time.asc()).all()
 
@@ -189,6 +195,6 @@ def get_tutor_availability(
 
     return {
         "response_code": "1",
-        "detail": "Successfully retrieved availability list",
+        "detail": get_text("availability_list_success", lang),
         "data": formatted_data
     }

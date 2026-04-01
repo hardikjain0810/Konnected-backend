@@ -12,8 +12,9 @@ from uuid import UUID
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 @router.get("/data")
-async def get_data():
-    return success_response(message="Data received successfully",
+async def get_data(req: Request):
+    lang = get_lang(req)
+    return success_response(message=get_text("data_received_success", lang),
                             data={"language":[lang.value for lang in Language],"Timezone":[tz.value for tz in Timezone],"Interest":[inter.value for inter in Interest]})
 
 @router.post("", response_model=ProfileResponse)
@@ -111,15 +112,16 @@ async def update_profile(
     }
 
 @router.get("/get-profile/{user_id}", response_model=ProfileResponse)
-async def get_profile_by_user_id(user_id: UUID, db: Session = Depends(get_db)):
+async def get_profile_by_user_id(user_id: UUID, req: Request, db: Session = Depends(get_db)):
+    lang = get_lang(req)
     profile = db.query(Profile).filter(Profile.user_id == user_id).first()
 
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        raise HTTPException(status_code=404, detail=get_text("profile_not_found", lang))
 
     return {
         "response_code": "1",
-        "detail": "Profile fetched successfully",
+        "detail": get_text("profile_fetched_success", lang),
         "data": {
             "user_id": str(profile.user_id),
             "display_name": profile.display_name,
@@ -134,12 +136,14 @@ async def get_profile_by_user_id(user_id: UUID, db: Session = Depends(get_db)):
 @router.get("/my-sessions", response_model=StudentBookingsResponse)
 def get_student_sessions(
     request: StudentBookingCreate,
+    req: Request,
     db: Session = Depends(get_db)):
+    lang = get_lang(req)
     
     if not request.student_id:
         raise HTTPException(
             status_code=400,
-            detail="User not authenticated or ID is missing"
+            detail=get_text("student_auth_missing", lang)
         )
     try:
         from uuid import UUID
@@ -170,28 +174,30 @@ def get_student_sessions(
 
         return {
             "response_code": "1",
-            "detail": "Retrieved booked sessions successfully",
+            "detail": get_text("student_sessions_retrieved", lang),
             "data": session_list
         }
 
     except Exception as e:
         logger.error(f"Error in get_student_sessions: {str(e)}")
-        raise HTTPException(status_code=500, detail={"error":str(e)}) 
+        raise HTTPException(status_code=500, detail=get_text("student_sessions_error", lang))
 
 @router.post("/tutor-availability/{tutor_id}", response_model=StudentTutorAvailabilityResponse)
 def get_tutor_availability_for_student(
     tutor_id: UUID,
     request: GetTutorAvailabilityForStudent,
+    req: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    lang = get_lang(req)
     student_role = db.query(UserRole).filter(
         UserRole.user_id == current_user.id,
         UserRole.role.in_([RoleType.student, RoleType.both])
     ).first()
 
     if not student_role:
-        raise HTTPException(status_code=403, detail="Access denied. You are not a student.")
+        raise HTTPException(status_code=403, detail=get_text("not_a_student", lang))
 
     availability = db.query(AvailabilityRule).filter(
         AvailabilityRule.tutor_id == tutor_id
@@ -202,7 +208,7 @@ def get_tutor_availability_for_student(
 
     return {
         "response_code": "1",
-        "detail": "Tutor availability fetched successfully.",
+        "detail": get_text("tutor_availability_fetched", lang),
         "data": [
             {
                 "tutor_id": slot.tutor_id,

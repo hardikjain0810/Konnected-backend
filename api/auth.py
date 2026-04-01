@@ -124,7 +124,7 @@ async def verify(request: VerifyOTPRequest, response: Response, req: Request, db
 
     user_role = db.query(UserRole).filter(UserRole.user_id == user.id).first()
     if not user_role:
-        raise HTTPException(status_code=404, detail="User role not assigned.")
+        raise HTTPException(status_code=404, detail=get_text("user_role_not_assigned", lang))
     
     tutor_id = None
     student_id = None

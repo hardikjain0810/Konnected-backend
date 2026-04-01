@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from uuid import UUID
 from db.database import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import Date, Time, cast
 from core.logging_config import get_logger
+from core.utils import get_lang
+from core.translations import get_text
 from schemas.schemas import CancelSlotCreate, CancelSlotResponse
 from models.database_models import TutorSlot, SlotStatus, AvailabilityRule
 
@@ -15,9 +17,11 @@ logger = get_logger()
 @router.delete("/cancel/{slot_id}", response_model=CancelSlotResponse)
 def delete_tutor_slot(
     slot_id: UUID, 
-    request: CancelSlotCreate, 
+    request: CancelSlotCreate,
+    req: Request,
     db: Session = Depends(get_db)
 ):
+    lang = get_lang(req)
     # 1. Fetch the specific slot based on tutor_id and the slot_id from params
     slot = db.query(TutorSlot).filter(
         TutorSlot.id == slot_id,
@@ -27,7 +31,7 @@ def delete_tutor_slot(
     if not slot:
         raise HTTPException(
             status_code=404, 
-            detail="Slot not found or does not belong to this tutor."
+            detail=get_text("slot_not_found_or_owner", lang)
         )
 
     # 2. Find the corresponding AvailabilityRule
@@ -52,7 +56,7 @@ def delete_tutor_slot(
 
         return {
             "response_code": "1",
-            "detail": "Slot disabled and availability rule removed successfully.",
+            "detail": get_text("slot_disabled_success", lang),
             "data": [
                 {
                     "tutor_id": str(request.tutor_id),
@@ -65,4 +69,4 @@ def delete_tutor_slot(
     except Exception as e:
         db.rollback()
         logger.error(f"Cancellation Error: {str(e)}")
-        raise HTTPException(status_code=500, detail="An error occurred during cancellation.")
+        raise HTTPException(status_code=500, detail=get_text("slot_cancel_error", lang))

@@ -15,11 +15,12 @@ from uuid import UUID
 router = APIRouter(prefix="/tutor", tags=["tutor"])
 
 @router.get("/options")
-async def get_tutor_options():
+async def get_tutor_options(req: Request):
     """Get available options for languages and topics."""
+    lang = get_lang(req)
     return {
         "response_code": "1",
-        "detail": "Options fetched successfully",
+        "detail": get_text("options_fetched", lang),
         "data": {
             "languages": [lang.value for lang in Language],
             "topics": [topic.value for topic in TutorTopic]
@@ -140,11 +141,13 @@ async def update_tutor_profile(
 @router.post("/recommended", response_model=MarketplaceResponse)
 def get_home_tutors(
     request: TutorSearchRequest,
+    req: Request,
     db: Session = Depends(get_db)):
+    lang = get_lang(req)
     # Get student's target language
     student = db.query(Profile).filter(Profile.user_id == request.student_id).first()
     if student is None:
-        raise HTTPException(status_code=404, detail="Student doesn't exist.")
+        raise HTTPException(status_code=404, detail=get_text("student_not_found", lang))
     # Query Tutors (Filtering by is_published and Language)
     query = db.query(TutorProfile).filter(
         TutorProfile.is_published == True
@@ -181,14 +184,16 @@ def get_home_tutors(
 
     return {
         "response_code":"1",
-        "detail":"Recommended tutors",
+        "detail": get_text("recommended_tutors", lang),
         "match_language": request.match_language,
         "data":{"tutors": results}
         }
 
 @router.post("/slots/booked",response_model=GetTutorAvailabilityResponse)
 async def get_tutor_bookings(request: GetTutorAvailability,
+                             req: Request,
                              db: Session = Depends(get_db)):
+    lang = get_lang(req)
     try:
         query = db.query(
             TutorSlot, 
@@ -218,23 +223,24 @@ async def get_tutor_bookings(request: GetTutorAvailability,
             })
         return {
             "response_code":"1",
-            "detail": "Successfully displayed list " ,
+            "detail": get_text("booked_slots_listed", lang),
             "data": slot_list
         }
     except Exception as e:
         logger.error({"error":str(e)})
-        raise HTTPException(status_code=500, detail={"error":str(e)}) 
+        raise HTTPException(status_code=500, detail=get_text("internal_error", lang))
 
 @router.get("/get-profile/{tutor_id}", response_model=TutorProfileResponse)
-async def get_tutor_profile_by_id(tutor_id: UUID, db: Session = Depends(get_db)):
+async def get_tutor_profile_by_id(tutor_id: UUID, req: Request, db: Session = Depends(get_db)):
+    lang = get_lang(req)
     tutor_profile = db.query(TutorProfile).filter(TutorProfile.user_id == tutor_id).first()
 
     if not tutor_profile:
-        raise HTTPException(status_code=404, detail="Tutor profile not found")
+        raise HTTPException(status_code=404, detail=get_text("tutor_profile_not_found", lang))
 
     return {
         "response_code": "1",
-        "detail": "Tutor profile fetched successfully",
+        "detail": get_text("tutor_profile_fetched", lang),
         "data": {
             "user_id": str(tutor_profile.user_id),
             "name": tutor_profile.name,
@@ -248,13 +254,14 @@ async def get_tutor_profile_by_id(tutor_id: UUID, db: Session = Depends(get_db))
     }
 
 @router.get("/{tutor_id}", response_model=TutorDetailResponse)
-async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
+async def get_tutor_details(tutor_id: UUID, req: Request, db: Session = Depends(get_db)):
+    lang = get_lang(req)
     # Fetch only from TutorProfile
     profile = db.query(TutorProfile).filter(TutorProfile.user_id == tutor_id).first()
 
     if not profile:
         logger.warning(f"Tutor Profile not found for ID: {tutor_id}")
-        raise HTTPException(status_code=404, detail="Tutor not found")
+        raise HTTPException(status_code=404, detail=get_text("tutor_not_found", lang))
 
     # Fetch the next 3 available slots from the Slots table
     raw_slots = db.query(TutorSlot).\
@@ -286,7 +293,7 @@ async def get_tutor_details(tutor_id: UUID, db: Session = Depends(get_db)):
 
     return {
         "response_code":"1",
-        "detail":"Profile for specific tutor id",
+        "detail": get_text("tutor_profile_by_id", lang),
         "data":tutor_data
     }
 

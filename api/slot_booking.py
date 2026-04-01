@@ -47,9 +47,9 @@ def create_booking(request: SlotBookingCreate,
         ).order_by(TutorSlot.start_at.asc()).first()
 
         error_details = {
-            "error": "Slot unavailable",
+            "error": get_text("slot_unavailable", lang),
             "suggested_time": nearest_slot.start_at if nearest_slot else None,
-            "message": f"The requested slot is taken. Next available: {nearest_slot.start_at}" if nearest_slot else "No other slots."
+            "message": get_text("slot_taken_next", lang, time=nearest_slot.start_at) if nearest_slot else get_text("slot_no_other", lang)
         }
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -79,7 +79,7 @@ def create_booking(request: SlotBookingCreate,
         
         return {
             "response_code": "1",
-            "detail":"Slot booked successfully",
+            "detail": get_text("slot_booked_success", lang),
             "data":{
                 "booking_id": new_booking.id,
                 "tutor_id": new_booking.tutor_id,
@@ -95,12 +95,12 @@ def create_booking(request: SlotBookingCreate,
         logger.warning(f"Booking conflict for slot {requested_slot.id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Slot unavailable. Please try another slot."
+            detail=get_text("slot_unavailable_retry", lang)
         )
     except Exception as e:
         db.rollback() # Undo changes if anything fails (e.g., DB connection drop)
         logger.error(f"Error during booking: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error while processing booking."
+            detail=get_text("booking_internal_error", lang)
         )
