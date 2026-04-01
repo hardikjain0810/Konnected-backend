@@ -254,3 +254,17 @@ class TutorSearchRequest(BaseModel):
     student_id: str
     search: Optional[str] = ""
     match_language: bool = False
+
+class GetTutorAvailabilityForStudent(BaseModel):
+    tutor_id: Union[UUID,str]
+
+class StudentTutorAvailabilityData(BaseModel):
+    tutor_id: Union[UUID, str]
+    date: date
+    start_time: time
+    end_time: time
+
+class StudentTutorAvailabilityResponse(BaseResponse):
+    response_code: str
+    detail: str
+    data: List[StudentTutorAvailabilityData]

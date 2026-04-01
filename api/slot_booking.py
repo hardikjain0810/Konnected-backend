@@ -95,7 +95,7 @@ def create_booking(request: SlotBookingCreate,
         logger.warning(f"Booking conflict for slot {requested_slot.id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Booking failed due to database slot uniqueness. Remove unique constraint on bookings.slot_id to allow multiple students per slot."
+            detail="Slot unavailable. Please try another slot."
         )
     except Exception as e:
         db.rollback() # Undo changes if anything fails (e.g., DB connection drop)

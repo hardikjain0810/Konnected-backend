@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.database_models import User, Profile, TutorProfile, Language, Timezone, Interest, TutorSlot, Booking
-from schemas.schemas import ProfileCreate, ProfileResponse, StudentBookingCreate, StudentBookingsResponse
+from models.database_models import User, Profile, TutorProfile, Language, Timezone, Interest, TutorSlot, Booking, AvailabilityRule, UserRole, RoleType
+from schemas.schemas import ProfileCreate, ProfileResponse, StudentBookingCreate, StudentBookingsResponse, StudentTutorAvailabilityResponse, GetTutorAvailabilityForStudent
 from core.utils import get_lang,success_response
 from core.auth import get_current_user
 from core.logging_config import logger
 from core.translations import get_text
+from uuid import UUID
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -155,3 +156,39 @@ def get_student_sessions(
     except Exception as e:
         logger.error(f"Error in get_student_sessions: {str(e)}")
         raise HTTPException(status_code=500, detail={"error":str(e)}) 
+
+@router.post("/tutor-availability/{tutor_id}", response_model=StudentTutorAvailabilityResponse)
+def get_tutor_availability_for_student(
+    tutor_id: UUID,
+    request: GetTutorAvailabilityForStudent,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    student_role = db.query(UserRole).filter(
+        UserRole.user_id == current_user.id,
+        UserRole.role.in_([RoleType.student, RoleType.both])
+    ).first()
+
+    if not student_role:
+        raise HTTPException(status_code=403, detail="Access denied. You are not a student.")
+
+    availability = db.query(AvailabilityRule).filter(
+        AvailabilityRule.tutor_id == tutor_id
+    ).order_by(
+        AvailabilityRule.date.asc(),
+        AvailabilityRule.start_time.asc()
+    ).all()
+
+    return {
+        "response_code": "1",
+        "detail": "Tutor availability fetched successfully.",
+        "data": [
+            {
+                "tutor_id": slot.tutor_id,
+                "date": slot.date,
+                "start_time": slot.start_time,
+                "end_time": slot.end_time,
+            }
+            for slot in availability
+        ],
+    }
