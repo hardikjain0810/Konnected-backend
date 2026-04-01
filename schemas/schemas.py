@@ -107,7 +107,7 @@ class AvailabilityRuleData(BaseModel):
 class AvailabilityResponse(BaseResponse):
     response_code: str 
     detail: str
-    data: List[AvailabilityRuleData] = None
+    data: AvailabilityRuleData
 
 class TutorRecommendation(BaseModel):
     id: UUID
