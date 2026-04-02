@@ -14,6 +14,7 @@ from models.database_models import TutorSlot, SlotStatus, AvailabilityRule
 router = APIRouter(prefix="/tutor", tags=["tutor"])
 logger = get_logger()
 
+# Delete slot from tutor end.
 @router.delete("/cancel/{slot_id}", response_model=CancelSlotResponse)
 def delete_tutor_slot(
     slot_id: UUID, 

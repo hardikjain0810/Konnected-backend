@@ -166,6 +166,7 @@ class SlotBookingResponse(BaseModel):
     data: Optional[SlotBookingData] = None
 
 class SessionCancelRequest(BaseModel):
+    student_id: UUID
     slot_id: UUID
 
 class TutorTopicRequest(BaseModel):

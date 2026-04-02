@@ -128,7 +128,7 @@ def cancel_student_booking(
 
     booking = db.query(Booking).filter(
         Booking.slot_id == request.slot_id,
-        Booking.student_id == current_user.id
+        Booking.student_id == request.student_id
     ).first()
 
     if not booking:
