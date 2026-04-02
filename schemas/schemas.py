@@ -198,7 +198,7 @@ class GetTutorAvailabilityData(BaseModel):
     date: date
     start_time: time
     end_time: time
-    topics: str
+    student_name: str
 
 class GetTutorAvailabilityResponse(BaseResponse):
     response_code:str

@@ -135,55 +135,6 @@ async def get_profile_by_user_id(user_id: UUID, req: Request, db: Session = Depe
         }
     }
 
-@router.get("/my-sessions", response_model=StudentBookingsResponse)
-def get_student_sessions(
-    request: StudentBookingCreate,
-    req: Request,
-    db: Session = Depends(get_db)):
-    lang = get_lang(req)
-    
-    if not request.student_id:
-        raise HTTPException(
-            status_code=400,
-            detail=get_text("student_auth_missing", lang)
-        )
-    try:
-        from uuid import UUID
-        student_id = request.student_id
-        if isinstance(student_id, str):
-            student_id = UUID(student_id)
-        results = db.query(
-            TutorSlot,
-            TutorProfile.name.label("tutor_name")
-        ).join(
-            Booking, TutorSlot.id == Booking.slot_id
-        ).outerjoin(
-            TutorProfile, Booking.tutor_id == TutorProfile.user_id
-        ).filter(
-            Booking.student_id == student_id) \
-        .all()
-
-        session_list = []
-        for slot, tutor_name in results:
-            session_list.append({
-                "slot_id": str(slot.id),
-                "tutor_name": tutor_name,
-                "start_date": slot.start_at.date().isoformat(),
-                "start_time": slot.start_at.time().strftime("%H:%M"),
-                "end_time": slot.end_at.time().strftime("%H:%M"),
-                "status": str(slot.status)
-            })
-
-        return {
-            "response_code": "1",
-            "detail": get_text("student_sessions_retrieved", lang),
-            "data": session_list
-        }
-
-    except Exception as e:
-        logger.error(f"Error in get_student_sessions: {str(e)}")
-        raise HTTPException(status_code=500, detail=get_text("student_sessions_error", lang))
-
 @router.post("/bookings/list", response_model=StudentSessionListResponse)
 def get_student_sessions_list(
     request: StudentBookingCreate,

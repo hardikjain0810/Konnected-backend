@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.database_models import User, TutorProfile, Language, TutorTopic, RoleType, UserRole, TutorSlot, AvailabilityRule, Profile
+from models.database_models import User, TutorProfile, Language, TutorTopic, RoleType, UserRole, TutorSlot, AvailabilityRule, Profile, Booking
 from schemas.schemas import TutorProfileCreate, TutorProfileResponse, TutorDetailResponse, MarketplaceResponse, GetTutorAvailability, GetTutorAvailabilityResponse, TutorSearchRequest
 from datetime import timezone, datetime
 from core.utils import get_lang
@@ -196,12 +196,14 @@ async def get_tutor_bookings(request: GetTutorAvailability,
     lang = get_lang(req)
     try:
         query = db.query(
-            TutorSlot, 
-            AvailabilityRule.topic
+            TutorSlot,
+            Profile.display_name.label("student_name")
         ).join(
-            AvailabilityRule, 
-            (TutorSlot.tutor_id == AvailabilityRule.tutor_id) & 
-            (func.date(TutorSlot.start_at) == AvailabilityRule.date)
+            Booking,
+            Booking.slot_id == TutorSlot.id
+        ).outerjoin(
+            Profile,
+            Profile.user_id == Booking.student_id
         ).filter(
             TutorSlot.tutor_id == request.tutor_id,
             TutorSlot.status == "booked"
@@ -213,13 +215,13 @@ async def get_tutor_bookings(request: GetTutorAvailability,
         results = query.order_by(TutorSlot.start_at.asc()).all()
 
         slot_list = []
-        for slot, topic in results:
+        for slot, student_name in results:
             slot_list.append({
                 "tutor_id": str(slot.tutor_id),
                 "date": slot.start_at.date().isoformat(),
                 "start_time": slot.start_at.time().strftime("%H:%M"),
                 "end_time": slot.end_at.time().strftime("%H:%M"),
-                "topics": topic 
+                "student_name": student_name if student_name else ""
             })
         return {
             "response_code":"1",
