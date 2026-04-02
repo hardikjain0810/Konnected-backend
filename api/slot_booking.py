@@ -12,7 +12,7 @@ from schemas.schemas import SlotBookingCreate, SlotBookingResponse
 import uuid
 from fastapi.encoders import jsonable_encoder
 
-router = APIRouter(prefix="", tags=["tutor"])
+router = APIRouter(prefix="/profile", tags=["tutor"])
 logger = get_logger()
 
 @router.post("/bookings", status_code=status.HTTP_201_CREATED, response_model=SlotBookingResponse)
