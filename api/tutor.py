@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 from models.database_models import User, TutorProfile, Language, TutorTopic, RoleType, UserRole, TutorSlot, AvailabilityRule, Profile, Booking, SlotStatus
 from schemas.schemas import TutorProfileCreate, TutorProfileResponse, TutorDetailResponse, MarketplaceResponse, GetTutorAvailability, GetTutorAvailabilityResponse, TutorSearchRequest, AvailabilityRuleCreate, AvailabilityResponse, GetAvailabilityRuleCreate, GetAvailabilityResponse
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 from core.utils import get_lang
 from core.auth import get_current_user
 from core.logging_config import logger
