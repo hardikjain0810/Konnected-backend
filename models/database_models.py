@@ -36,6 +36,11 @@ class BookingStatus(enum.Enum):
     completed = "completed"
     no_show = "no_show"
 
+class BookingTimeStatus(enum.Enum):
+    past = "past"
+    current = "current"
+    upcoming = "upcoming"
+
 class Language(enum.Enum):
     English = "English"
     Hindi = "Hindi"
@@ -154,6 +159,7 @@ class Booking(Base):
     slot_id = Column(UUID(as_uuid=True), ForeignKey("tutor_slots.id"))
 
     status = Column(Enum(BookingStatus))
+    booking_time_status = Column(Enum(BookingTimeStatus), default=BookingTimeStatus.upcoming)
     goal = str
 
     starts_at = Column(DateTime)
