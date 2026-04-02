@@ -196,31 +196,31 @@ async def get_tutor_bookings(request: GetTutorAvailability,
     lang = get_lang(req)
     try:
         query = db.query(
+            Booking,
             TutorSlot,
             Profile.display_name.label("student_name")
         ).join(
-            Booking,
+            TutorSlot,
             Booking.slot_id == TutorSlot.id
         ).outerjoin(
             Profile,
             Profile.user_id == Booking.student_id
         ).filter(
-            TutorSlot.tutor_id == request.tutor_id,
-            TutorSlot.status == "booked"
+            Booking.tutor_id == request.tutor_id
         )
 
         if request.availability_date and str(request.availability_date).strip() != "":
-            query = query.filter(func.date(TutorSlot.start_at) == request.availability_date)
+            query = query.filter(func.date(Booking.starts_at) == request.availability_date)
 
-        results = query.order_by(TutorSlot.start_at.asc()).all()
+        results = query.order_by(Booking.starts_at.asc()).all()
 
         slot_list = []
-        for slot, student_name in results:
+        for booking, slot, student_name in results:
             slot_list.append({
-                "tutor_id": str(slot.tutor_id),
-                "date": slot.start_at.date().isoformat(),
-                "start_time": slot.start_at.time().strftime("%H:%M"),
-                "end_time": slot.end_at.time().strftime("%H:%M"),
+                "tutor_id": str(booking.tutor_id),
+                "date": booking.starts_at.date().isoformat(),
+                "start_time": booking.starts_at.time().strftime("%H:%M"),
+                "end_time": booking.ends_at.time().strftime("%H:%M"),
                 "student_name": student_name if student_name else ""
             })
         return {

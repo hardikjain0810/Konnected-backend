@@ -235,6 +235,7 @@ class StudentBookingsResponse(BaseResponse):
 
 class StudentSessionListItem(BaseModel):
     tutor_id: str
+    tutor_name: str
     session_id: str
     student_id: str
     slot: str

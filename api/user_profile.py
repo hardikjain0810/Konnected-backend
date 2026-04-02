@@ -157,7 +157,8 @@ def get_student_sessions_list(
         rows = db.query(
             Booking,
             TutorSlot,
-            AvailabilityRule.topic
+            AvailabilityRule.topic,
+            TutorProfile.name.label("tutor_name")
         ).join(
             TutorSlot, Booking.slot_id == TutorSlot.id
         ).outerjoin(
@@ -167,6 +168,9 @@ def get_student_sessions_list(
                 AvailabilityRule.date == cast(TutorSlot.start_at, Date),
                 AvailabilityRule.start_time == cast(TutorSlot.start_at, Time)
             )
+        ).outerjoin(
+            TutorProfile,
+            TutorProfile.user_id == Booking.tutor_id
         ).filter(
             Booking.student_id == student_id
         ).order_by(
@@ -175,7 +179,7 @@ def get_student_sessions_list(
 
         now = datetime.now()
         data = []
-        for booking, slot, topic in rows:
+        for booking, slot, topic, tutor_name in rows:
             if slot.start_at <= now <= slot.end_at:
                 booking_state = "current"
             elif now < slot.start_at:
@@ -185,6 +189,7 @@ def get_student_sessions_list(
 
             data.append({
                 "tutor_id": str(booking.tutor_id),
+                "tutor_name": tutor_name if tutor_name else "",
                 "session_id": str(booking.id),
                 "student_id": str(booking.student_id),
                 "slot": f"{slot.start_at.strftime('%Y-%m-%d')} / {slot.start_at.strftime('%H.%M.%S')} - {slot.end_at.strftime('%H.%M.%S')}",
