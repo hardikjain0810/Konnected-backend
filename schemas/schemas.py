@@ -233,6 +233,19 @@ class StudentBookingsResponse(BaseResponse):
     detail: str
     data: List[StudentBookingDetail]
 
+class StudentSessionListItem(BaseModel):
+    tutor_id: str
+    session_id: str
+    student_id: str
+    slot: str
+    topic: str
+    status: str
+
+class StudentSessionListResponse(BaseResponse):
+    response_code: str
+    detail: str
+    data: List[StudentSessionListItem]
+
 class GetAvailabilityRuleCreate(BaseModel):
     tutor_id: UUID
     availability_date: Optional[str] = Query(default=None)

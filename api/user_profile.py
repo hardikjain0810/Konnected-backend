@@ -1,13 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import and_, func, cast, Date, Time
 from db.database import get_db
 from models.database_models import User, Profile, TutorProfile, Language, Timezone, Interest, TutorSlot, Booking, AvailabilityRule, UserRole, RoleType
-from schemas.schemas import ProfileCreate, ProfileResponse, StudentBookingCreate, StudentBookingsResponse, StudentTutorAvailabilityResponse, GetTutorAvailabilityForStudent
+from schemas.schemas import ProfileCreate, ProfileResponse, StudentBookingCreate, StudentBookingsResponse, StudentTutorAvailabilityResponse, GetTutorAvailabilityForStudent, StudentSessionListResponse
 from core.utils import get_lang,success_response
 from core.auth import get_current_user
 from core.logging_config import logger
 from core.translations import get_text
 from uuid import UUID
+from datetime import datetime
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -180,6 +182,75 @@ def get_student_sessions(
 
     except Exception as e:
         logger.error(f"Error in get_student_sessions: {str(e)}")
+        raise HTTPException(status_code=500, detail=get_text("student_sessions_error", lang))
+
+@router.post("/bookings/list", response_model=StudentSessionListResponse)
+def get_student_sessions_list(
+    request: StudentBookingCreate,
+    req: Request,
+    db: Session = Depends(get_db)
+):
+    lang = get_lang(req)
+
+    if not request.student_id:
+        raise HTTPException(
+            status_code=400,
+            detail=get_text("student_auth_missing", lang)
+        )
+
+    try:
+        student_id = request.student_id
+        if isinstance(student_id, str):
+            student_id = UUID(student_id)
+
+        rows = db.query(
+            Booking,
+            TutorSlot,
+            AvailabilityRule.topic
+        ).join(
+            TutorSlot, Booking.slot_id == TutorSlot.id
+        ).outerjoin(
+            AvailabilityRule,
+            and_(
+                AvailabilityRule.tutor_id == Booking.tutor_id,
+                AvailabilityRule.date == cast(TutorSlot.start_at, Date),
+                AvailabilityRule.start_time == cast(TutorSlot.start_at, Time)
+            )
+        ).filter(
+            Booking.student_id == student_id
+        ).order_by(
+            TutorSlot.start_at.asc()
+        ).all()
+
+        now = datetime.now()
+        data = []
+        for booking, slot, topic in rows:
+            if slot.start_at <= now <= slot.end_at:
+                booking_state = "current"
+            elif now < slot.start_at:
+                booking_state = "upcomming"
+            else:
+                booking_state = "Past"
+
+            data.append({
+                "tutor_id": str(booking.tutor_id),
+                "session_id": str(booking.id),
+                "student_id": str(booking.student_id),
+                "slot": f"{slot.start_at.strftime('%Y-%m-%d')} / {slot.start_at.strftime('%H.%M.%S')} - {slot.end_at.strftime('%H.%M.%S')}",
+                "topic": topic if topic else "",
+                "status": booking_state
+            })
+
+        return {
+            "response_code": "1",
+            "detail": get_text("session_list_success", lang),
+            "data": data
+        }
+
+    except ValueError:
+        raise HTTPException(status_code=400, detail=get_text("student_auth_missing", lang))
+    except Exception as e:
+        logger.error(f"Error in get_student_sessions_list: {str(e)}")
         raise HTTPException(status_code=500, detail=get_text("student_sessions_error", lang))
 
 @router.post("/tutor-availability/{tutor_id}", response_model=StudentTutorAvailabilityResponse)

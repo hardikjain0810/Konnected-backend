@@ -62,6 +62,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "profile_fetched_success": "Profile fetched successfully",
         "student_auth_missing": "User not authenticated or ID is missing",
         "student_sessions_retrieved": "Retrieved booked sessions successfully",
+        "session_list_success": "List get succesfully",
         "student_sessions_error": "Error while retrieving student sessions.",
         "not_a_student": "Access denied. You are not a student.",
         "tutor_availability_fetched": "Tutor availability fetched successfully."
@@ -127,6 +128,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "profile_fetched_success": "프로필을 성공적으로 조회했습니다.",
         "student_auth_missing": "사용자 인증이 없거나 ID가 누락되었습니다.",
         "student_sessions_retrieved": "예약된 세션을 성공적으로 조회했습니다.",
+        "session_list_success": "목록을 성공적으로 가져왔습니다.",
         "student_sessions_error": "학생 세션 조회 중 오류가 발생했습니다.",
         "not_a_student": "접근이 거부되었습니다. 학생이 아닙니다.",
         "tutor_availability_fetched": "튜터 가능 시간을 성공적으로 조회했습니다."
