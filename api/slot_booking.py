@@ -56,6 +56,18 @@ def create_booking(request: SlotBookingCreate,
             detail=jsonable_encoder(error_details)
         )
 
+    # Validation: same student cannot book the same tutor slot twice.
+    existing_student_booking = db.query(Booking).filter(
+        Booking.slot_id == requested_slot.id,
+        Booking.student_id == current_user.id,
+        Booking.tutor_id == request.tutor_id
+    ).first()
+    if existing_student_booking:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=get_text("duplicate_student_slot_booking", lang)
+        )
+
     # Atomic Transaction: Create Booking & Update Slot
     try:
         # Create the Booking record with 'scheduled' status
