@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime
+from datetime import datetime, timedelta
 from core.logging_config import get_logger
 from core.utils import get_lang
 from core.auth import get_current_user
 from db.database import get_db
 from core.translations import get_text
 from models.database_models import TutorSlot, SlotStatus, BookingStatus, Booking
-from schemas.schemas import SlotBookingCreate, SlotBookingResponse
+from schemas.schemas import SlotBookingCreate, SlotBookingResponse, SessionCancelRequest, BaseResponse
 import uuid
 from fastapi.encoders import jsonable_encoder
 
@@ -112,6 +112,60 @@ def create_booking(request: SlotBookingCreate,
     except Exception as e:
         db.rollback() # Undo changes if anything fails (e.g., DB connection drop)
         logger.error(f"Error during booking: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=get_text("booking_internal_error", lang)
+        )
+
+@router.delete("/bookings/cancel", response_model=BaseResponse)
+def cancel_student_booking(
+    request: SessionCancelRequest,
+    req: Request,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    lang = get_lang(req)
+
+    booking = db.query(Booking).filter(
+        Booking.slot_id == request.slot_id,
+        Booking.student_id == current_user.id
+    ).first()
+
+    if not booking:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=get_text("booking_not_found", lang)
+        )
+
+    now = datetime.now()
+    if booking.starts_at - now <= timedelta(hours=1):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=get_text("cancel_before_one_hour", lang)
+        )
+
+    slot = db.query(TutorSlot).filter(TutorSlot.id == booking.slot_id).first()
+
+    try:
+        db.delete(booking)
+        db.flush()
+
+        remaining_bookings = db.query(Booking).filter(
+            Booking.slot_id == booking.slot_id
+        ).count()
+
+        if slot and remaining_bookings == 0 and slot.status != SlotStatus.disabled:
+            slot.status = SlotStatus.open
+
+        db.commit()
+
+        return {
+            "response_code": "1",
+            "detail": get_text("session_deleted_success", lang)
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error while cancelling booking: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=get_text("booking_internal_error", lang)
