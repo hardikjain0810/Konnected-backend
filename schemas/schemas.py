@@ -195,10 +195,12 @@ class GetTutorAvailability(BaseModel):
 
 class GetTutorAvailabilityData(BaseModel):
     tutor_id: str
+    student_id: str
     date: date
     start_time: time
     end_time: time
     student_name: str
+    booking_time_status: str
 
 class GetTutorAvailabilityResponse(BaseResponse):
     response_code:str
