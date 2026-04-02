@@ -196,7 +196,7 @@ def get_student_sessions_list(
             data.append({
                 "tutor_id": str(booking.tutor_id),
                 "tutor_name": tutor_name if tutor_name else "",
-                "session_id": str(booking.id),
+                "session_id": str(booking.slot_id),
                 "student_id": str(booking.student_id),
                 "slot": f"{slot.start_at.strftime('%Y-%m-%d')} / {slot.start_at.strftime('%H.%M.%S')} - {slot.end_at.strftime('%H.%M.%S')}",
                 "topic": topic if topic else "",
