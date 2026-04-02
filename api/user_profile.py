@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func, cast, Date, Time
 from db.database import get_db
-from models.database_models import User, Profile, TutorProfile, Language, Timezone, Interest, TutorSlot, Booking, AvailabilityRule, UserRole, RoleType
+from models.database_models import User, Profile, TutorProfile, Language, Timezone, Interest, TutorSlot, Booking, AvailabilityRule, UserRole, RoleType, BookingTimeStatus
 from schemas.schemas import ProfileCreate, ProfileResponse, StudentBookingCreate, StudentBookingsResponse, StudentTutorAvailabilityResponse, GetTutorAvailabilityForStudent, StudentSessionListResponse
 from core.utils import get_lang,success_response
 from core.auth import get_current_user
@@ -179,13 +179,19 @@ def get_student_sessions_list(
 
         now = datetime.now()
         data = []
+        status_changed = False
         for booking, slot, topic, tutor_name in rows:
-            if slot.start_at <= now <= slot.end_at:
-                booking_state = "current"
-            elif now < slot.start_at:
-                booking_state = "upcomming"
-            else:
-                booking_state = "Past"
+            # Respect DB value directly. Auto-fill only if it's missing.
+            if booking.booking_time_status is None:
+                if slot.start_at <= now <= slot.end_at:
+                    booking.booking_time_status = BookingTimeStatus.current
+                elif now < slot.start_at:
+                    booking.booking_time_status = BookingTimeStatus.upcoming
+                else:
+                    booking.booking_time_status = BookingTimeStatus.past
+                status_changed = True
+
+            booking_state = booking.booking_time_status.value
 
             data.append({
                 "tutor_id": str(booking.tutor_id),
@@ -196,6 +202,9 @@ def get_student_sessions_list(
                 "topic": topic if topic else "",
                 "status": booking_state
             })
+
+        if status_changed:
+            db.commit()
 
         return {
             "response_code": "1",
