@@ -156,8 +156,10 @@ class SlotBookingData(BaseModel):
     booking_id: UUID
     tutor_id: UUID
     slot_id: UUID
-    starts_at: datetime
-    ends_at: datetime
+    topic: str
+    date: date
+    starts_at: time
+    ends_at: time
     status: str
 
 class SlotBookingResponse(BaseModel):

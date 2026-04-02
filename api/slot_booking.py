@@ -96,8 +96,10 @@ def create_booking(request: SlotBookingCreate,
                 "booking_id": new_booking.id,
                 "tutor_id": new_booking.tutor_id,
                 "slot_id": new_booking.slot_id,
-                "starts_at": new_booking.starts_at,
-                "ends_at": new_booking.ends_at,
+                "topic": request.topic,
+                "date": requested_slot.start_at.date(),
+                "starts_at": requested_slot.start_at.time(),
+                "ends_at": requested_slot.end_at.time(),
                 "status": new_booking.status,
             }
         }
@@ -121,9 +123,7 @@ def create_booking(request: SlotBookingCreate,
 def cancel_student_booking(
     request: SessionCancelRequest,
     req: Request,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
+    db: Session = Depends(get_db)):
     lang = get_lang(req)
 
     booking = db.query(Booking).filter(
