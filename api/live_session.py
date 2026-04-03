@@ -157,7 +157,8 @@ def join_live_session(
         if actor_uuid != tutor_uuid:
             raise HTTPException(status_code=403, detail=get_text("slot_not_authorized", lang))
 
-    if not _within_join_window(slot):
+    # Student joins are time-gated. Tutor can always join their own slot.
+    if payload.actor_type == "student" and not _within_join_window(slot):
         raise HTTPException(status_code=422, detail=get_text("outside_join_window", lang))
 
     room_id = _build_room_id(payload.tutor_id, slot)
