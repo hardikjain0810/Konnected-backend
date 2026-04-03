@@ -39,14 +39,41 @@ def _build_room_id(tutor_id: str, slot: TutorSlot) -> str:
 
 
 def _within_join_window(slot: TutorSlot) -> bool:
-    # Slot datetimes are stored without timezone in DB, but semantically UTC.
-    # Normalize both slot bounds and "now" to UTC to avoid local-time drift.
-    now = datetime.now(timezone.utc)
-    start_at = slot.start_at.replace(tzinfo=timezone.utc) if slot.start_at.tzinfo is None else slot.start_at.astimezone(timezone.utc)
-    end_at = slot.end_at.replace(tzinfo=timezone.utc) if slot.end_at.tzinfo is None else slot.end_at.astimezone(timezone.utc)
-    open_at = start_at - timedelta(minutes=5)
-    close_at = end_at + timedelta(minutes=10)
-    return open_at <= now <= close_at
+    # Slot timestamps are persisted as DateTime (often naive). Different
+    # deployments may treat those values as local server time or as UTC.
+    # For naive values, accept either interpretation to avoid false rejections.
+    if slot.start_at.tzinfo is None and slot.end_at.tzinfo is None:
+        open_at = slot.start_at - timedelta(minutes=5)
+        close_at = slot.end_at + timedelta(minutes=10)
+        now_local = datetime.now()
+        now_utc_naive = datetime.utcnow()
+        in_local_window = open_at <= now_local <= close_at
+        in_utc_window = open_at <= now_utc_naive <= close_at
+        logger.info(
+            "Live join window check (naive): open_at=%s close_at=%s now_local=%s now_utc=%s in_local=%s in_utc=%s",
+            open_at.isoformat(),
+            close_at.isoformat(),
+            now_local.isoformat(),
+            now_utc_naive.isoformat(),
+            in_local_window,
+            in_utc_window,
+        )
+        return in_local_window or in_utc_window
+
+    now_utc = datetime.now(timezone.utc)
+    start_at_utc = slot.start_at.astimezone(timezone.utc)
+    end_at_utc = slot.end_at.astimezone(timezone.utc)
+    open_at_utc = start_at_utc - timedelta(minutes=5)
+    close_at_utc = end_at_utc + timedelta(minutes=10)
+    in_window = open_at_utc <= now_utc <= close_at_utc
+    logger.info(
+        "Live join window check (aware): open_at_utc=%s close_at_utc=%s now_utc=%s in_window=%s",
+        open_at_utc.isoformat(),
+        close_at_utc.isoformat(),
+        now_utc.isoformat(),
+        in_window,
+    )
+    return in_window
 
 
 def _load_zego_generator():
