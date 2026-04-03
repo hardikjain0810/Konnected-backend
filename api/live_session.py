@@ -64,7 +64,7 @@ def _load_zego_generator():
         pass
     try:
         # Common path when copying ZEGO token generator source directly.
-        from token.python.src.token04 import generate_token04  # type: ignore
+        from zego_token_pkg.python.src.token04 import generate_token04  # type: ignore
         return generate_token04
     except Exception:
         pass
@@ -106,9 +106,14 @@ def _generate_live_token(user_id: str, room_id: str, role: str) -> tuple[str, da
         # Some helper versions don't take payload in signature.
         token = generator(app_id, user_id, settings.ZEGO_SERVER_SECRET, effective_seconds)
 
-    if isinstance(token, tuple):
+    if hasattr(token, "error_code"):
+        if int(getattr(token, "error_code", -1)) != 0:
+            raise ValueError(getattr(token, "error_message", "Unknown ZEGO token error"))
+        token = getattr(token, "token", "")
+    elif isinstance(token, tuple):
         # Defensive support if SDK returns (token, error)
         token = token[0]
+
     if not token:
         raise ValueError("Token generation returned empty token")
 
