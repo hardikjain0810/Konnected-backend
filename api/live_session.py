@@ -33,8 +33,8 @@ def _parse_uuid(value: str, error_message: str):
 
 def _build_room_id(tutor_id: str, slot: TutorSlot) -> str:
     date_str = slot.start_at.date().isoformat()
-    start_str = slot.start_at.time().strftime("%H:%M:%S")
-    end_str = slot.end_at.time().strftime("%H:%M:%S")
+    start_str = slot.start_at.time().strftime("%H_%M_%S")
+    end_str = slot.end_at.time().strftime("%H_%M_%S")
     return f"{tutor_id}_{date_str}_{start_str}_{end_str}"
 
 
