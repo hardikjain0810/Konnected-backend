@@ -39,9 +39,13 @@ def _build_room_id(tutor_id: str, slot: TutorSlot) -> str:
 
 
 def _within_join_window(slot: TutorSlot) -> bool:
-    now = datetime.now()
-    open_at = slot.start_at - timedelta(minutes=5)
-    close_at = slot.end_at + timedelta(minutes=10)
+    # Slot datetimes are stored without timezone in DB, but semantically UTC.
+    # Normalize both slot bounds and "now" to UTC to avoid local-time drift.
+    now = datetime.now(timezone.utc)
+    start_at = slot.start_at.replace(tzinfo=timezone.utc) if slot.start_at.tzinfo is None else slot.start_at.astimezone(timezone.utc)
+    end_at = slot.end_at.replace(tzinfo=timezone.utc) if slot.end_at.tzinfo is None else slot.end_at.astimezone(timezone.utc)
+    open_at = start_at - timedelta(minutes=5)
+    close_at = end_at + timedelta(minutes=10)
     return open_at <= now <= close_at
 
 
