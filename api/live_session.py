@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from core.auth import get_current_user
 from core.config import settings
+from core.logging_config import logger
 from core.translations import get_text
 from core.utils import get_lang
 from db.database import get_db
@@ -58,6 +59,12 @@ def _load_zego_generator():
         pass
     try:
         from token04 import generate_token04  # type: ignore
+        return generate_token04
+    except Exception:
+        pass
+    try:
+        # Common path when copying ZEGO token generator source directly.
+        from token.python.src.token04 import generate_token04  # type: ignore
         return generate_token04
     except Exception:
         pass
@@ -182,7 +189,8 @@ def join_live_session(
 
     try:
         token, expires_at = _generate_live_token(payload.actor_id, room_id, payload.actor_type)
-    except Exception:
+    except Exception as e:
+        logger.error(f"ZEGO token generation failed: {str(e)}")
         raise HTTPException(status_code=500, detail=get_text("token_generation_failed", lang))
 
     redis_client.set_live_session_meta(
