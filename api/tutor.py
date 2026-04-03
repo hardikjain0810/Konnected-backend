@@ -219,6 +219,7 @@ async def get_tutor_bookings(request: GetTutorAvailability,
             slot_list.append({
                 "tutor_id": str(booking.tutor_id),
                 "student_id": str(booking.student_id),
+                "slot_id": str(booking.slot_id),
                 "date": booking.starts_at.date().isoformat(),
                 "start_time": booking.starts_at.time().strftime("%H:%M"),
                 "end_time": booking.ends_at.time().strftime("%H:%M"),

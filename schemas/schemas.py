@@ -196,6 +196,7 @@ class GetTutorAvailability(BaseModel):
 class GetTutorAvailabilityData(BaseModel):
     tutor_id: str
     student_id: str
+    slot_id: str
     date: date
     start_time: time
     end_time: time
