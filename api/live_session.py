@@ -11,7 +11,7 @@ from core.translations import get_text
 from core.utils import get_lang
 from db.database import get_db
 from db.redis import redis_client
-from models.database_models import Booking, TutorSlot, User, Profile, TutorProfile
+from models.database_models import Booking, TutorSlot, User, Profile, TutorProfile, Timezone
 from schemas.schemas import (
     LiveSessionJoinRequest,
     LiveSessionJoinResponse,
@@ -38,27 +38,66 @@ def _build_room_id(tutor_id: str, slot: TutorSlot) -> str:
     return f"{tutor_id}_{date_str}_{start_str}_{end_str}"
 
 
-def _within_join_window(slot: TutorSlot) -> bool:
-    # Slot timestamps are persisted as DateTime (often naive). Different
-    # deployments may treat those values as local server time or as UTC.
-    # For naive values, accept either interpretation to avoid false rejections.
+def _timezone_from_profile(profile_tz: Timezone | None) -> timezone | None:
+    if profile_tz is None:
+        return None
+    raw = profile_tz.value if hasattr(profile_tz, "value") else str(profile_tz)
+    tz_map = {
+        "UTC-5 (EST)": timezone(timedelta(hours=-5)),
+        "UTC+9 (KST)": timezone(timedelta(hours=9)),
+        "UTC+5:30 (IST)": timezone(timedelta(hours=5, minutes=30)),
+    }
+    return tz_map.get(raw)
+
+
+def _within_join_window(slot: TutorSlot, slot_tz: timezone | None = None) -> bool:
+    # Slot timestamps are persisted as DateTime (often naive).
+    # If tutor timezone is known, interpret naive slot times in that timezone.
     if slot.start_at.tzinfo is None and slot.end_at.tzinfo is None:
         open_at = slot.start_at - timedelta(minutes=5)
         close_at = slot.end_at + timedelta(minutes=10)
-        now_local = datetime.now()
-        now_utc_naive = datetime.utcnow()
-        in_local_window = open_at <= now_local <= close_at
-        in_utc_window = open_at <= now_utc_naive <= close_at
+
+        if slot_tz is not None:
+            start_at_utc = slot.start_at.replace(tzinfo=slot_tz).astimezone(timezone.utc)
+            end_at_utc = slot.end_at.replace(tzinfo=slot_tz).astimezone(timezone.utc)
+            open_at_utc = start_at_utc - timedelta(minutes=5)
+            close_at_utc = end_at_utc + timedelta(minutes=10)
+            now_utc = datetime.now(timezone.utc)
+            in_window = open_at_utc <= now_utc <= close_at_utc
+            logger.info(
+                "Live join window check (naive+tutor_tz): open_at_utc=%s close_at_utc=%s now_utc=%s in_window=%s",
+                open_at_utc.isoformat(),
+                close_at_utc.isoformat(),
+                now_utc.isoformat(),
+                in_window,
+            )
+            return in_window
+
+        # Fallback: check common app timezones to avoid false negatives
+        # when profile timezone data is absent for old users.
+        candidate_tzs = [
+            timezone.utc,
+            timezone(timedelta(hours=-5)),
+            timezone(timedelta(hours=9)),
+            timezone(timedelta(hours=5, minutes=30)),
+        ]
+        in_any_window = False
+        now_utc = datetime.now(timezone.utc)
+        candidates = []
+        for tz in candidate_tzs:
+            now_in_tz_naive = now_utc.astimezone(tz).replace(tzinfo=None)
+            in_window = open_at <= now_in_tz_naive <= close_at
+            candidates.append(f"{tz.tzname(None)}:{now_in_tz_naive.isoformat()}={in_window}")
+            in_any_window = in_any_window or in_window
+
         logger.info(
-            "Live join window check (naive): open_at=%s close_at=%s now_local=%s now_utc=%s in_local=%s in_utc=%s",
+            "Live join window check (naive+fallback): open_at=%s close_at=%s candidates=%s in_any=%s",
             open_at.isoformat(),
             close_at.isoformat(),
-            now_local.isoformat(),
-            now_utc_naive.isoformat(),
-            in_local_window,
-            in_utc_window,
+            " | ".join(candidates),
+            in_any_window,
         )
-        return in_local_window or in_utc_window
+        return in_any_window
 
     now_utc = datetime.now(timezone.utc)
     start_at_utc = slot.start_at.astimezone(timezone.utc)
@@ -200,8 +239,11 @@ def join_live_session(
         if actor_uuid != tutor_uuid:
             raise HTTPException(status_code=403, detail=get_text("slot_not_authorized", lang))
 
+    tutor_profile = db.query(Profile).filter(Profile.user_id == tutor_uuid).first()
+    tutor_tz = _timezone_from_profile(tutor_profile.timezone if tutor_profile else None)
+
     # Student joins are time-gated. Tutor can always join their own slot.
-    if payload.actor_type == "student" and not _within_join_window(slot):
+    if payload.actor_type == "student" and not _within_join_window(slot, tutor_tz):
         raise HTTPException(status_code=422, detail=get_text("outside_join_window", lang))
 
     room_id = _build_room_id(payload.tutor_id, slot)
