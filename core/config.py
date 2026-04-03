@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     SMTP_PASS: str = "your_app_password"
     OTP_SEND_LIMIT: int = 5
     OTP_VERIFY_LIMIT: int = 10
+
+    # Live session / ZEGO config
+    ZEGO_APP_ID: int = int(os.getenv("ZEGO_APP_ID", 339934320))
+    ZEGO_SERVER_SECRET: str = os.getenv("ZEGO_SERVER_SECRET", "d6521464dc21868c4263c6fc08c31abe")
+    ZEGO_TOKEN_EXPIRE_SECONDS: int = int(os.getenv("ZEGO_TOKEN_EXPIRE_SECONDS", 1800))
     
     class Config:
         env_file = ".env"

@@ -1,6 +1,7 @@
 import redis
 from core.config import settings
 import time
+import json
 
 class RedisClient:
     def __init__(self):
@@ -70,5 +71,42 @@ class RedisClient:
         if count and int(count) >= settings.OTP_VERIFY_LIMIT:
             return False
         return True
+
+    # -------------------------------
+    # Live session helper methods
+    # -------------------------------
+    def set_live_session_meta(self, room_id: str, payload: dict, ttl_seconds: int = 7200):
+        key = f"live:room:meta:{room_id}"
+        self.client.setex(key, ttl_seconds, json.dumps(payload))
+
+    def get_live_session_meta(self, room_id: str) -> dict:
+        key = f"live:room:meta:{room_id}"
+        val = self.client.get(key)
+        return json.loads(val) if val else {}
+
+    def set_user_active_room(self, actor_id: str, room_id: str, ttl_seconds: int = 7200):
+        key = f"live:user:active:{actor_id}"
+        self.client.setex(key, ttl_seconds, room_id)
+
+    def get_user_active_room(self, actor_id: str) -> str:
+        key = f"live:user:active:{actor_id}"
+        return self.client.get(key)
+
+    def clear_user_active_room(self, actor_id: str):
+        key = f"live:user:active:{actor_id}"
+        self.client.delete(key)
+
+    def add_room_participant(self, room_id: str, actor_id: str, ttl_seconds: int = 7200):
+        key = f"live:room:participants:{room_id}"
+        self.client.sadd(key, actor_id)
+        self.client.expire(key, ttl_seconds)
+
+    def get_room_participants(self, room_id: str) -> list:
+        key = f"live:room:participants:{room_id}"
+        return list(self.client.smembers(key))
+
+    def clear_room_participants(self, room_id: str):
+        key = f"live:room:participants:{room_id}"
+        self.client.delete(key)
 
 redis_client = RedisClient()

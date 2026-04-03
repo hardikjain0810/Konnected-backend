@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import Query
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Union, Literal
 from datetime import date, time
 from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
@@ -291,3 +291,61 @@ class StudentTutorAvailabilityResponse(BaseResponse):
     response_code: str
     detail: str
     data: List[StudentTutorAvailabilityData]
+
+class LiveSessionJoinRequest(BaseModel):
+    actor_type: Literal["student", "tutor"]
+    actor_id: str
+    tutor_id: str
+    slot_id: str
+    date: date
+    start_time: time
+    end_time: time
+    wait_for_host: bool = True
+
+class LiveSessionJoinData(BaseModel):
+    room_id: str
+    token: str
+    user_id: str
+    user_name: str
+    role: str
+    can_enter_room: bool
+    host_joined: bool
+    waiting_message: Optional[str] = None
+    expires_at: datetime
+
+class LiveSessionJoinResponse(BaseModel):
+    response_code: str
+    detail: str
+    data: LiveSessionJoinData
+
+class LiveSessionStatusRequest(BaseModel):
+    actor_id: str
+    tutor_id: str
+    slot_id: str
+
+class LiveSessionStatusData(BaseModel):
+    room_id: str
+    session_state: str
+    host_joined: bool
+    can_enter_room: bool
+    server_time: datetime
+
+class LiveSessionStatusResponse(BaseModel):
+    response_code: str
+    detail: str
+    data: LiveSessionStatusData
+
+class LiveSessionEndRequest(BaseModel):
+    tutor_id: str
+    slot_id: str
+    room_id: str
+
+class LiveSessionEndData(BaseModel):
+    room_id: str
+    ended_at: datetime
+    session_state: str
+
+class LiveSessionEndResponse(BaseModel):
+    response_code: str
+    detail: str
+    data: LiveSessionEndData

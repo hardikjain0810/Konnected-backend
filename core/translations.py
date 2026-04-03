@@ -65,7 +65,17 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "session_list_success": "List get succesfully",
         "student_sessions_error": "Error while retrieving student sessions.",
         "not_a_student": "Access denied. You are not a student.",
-        "tutor_availability_fetched": "Tutor availability fetched successfully."
+        "tutor_availability_fetched": "Tutor availability fetched successfully.",
+        "join_payload_generated": "Join session payload generated.",
+        "live_status_fetched": "Live session status fetched.",
+        "live_session_ended": "Live session ended successfully.",
+        "identity_mismatch": "Actor identity does not match authenticated user.",
+        "slot_not_authorized": "You are not authorized for this slot.",
+        "outside_join_window": "You can only join between 5 minutes before start and 10 minutes after end.",
+        "student_overlap_conflict": "You are already in another live session that overlaps this slot.",
+        "token_generation_failed": "Unable to generate live token.",
+        "room_mismatch": "Provided room_id does not match server-generated room.",
+        "live_waiting_message": "Tutor has not joined yet. Please wait."
     },
     "ko": {
         "user_exists": "이미 존재하는 사용자입니다. 로그인해 주세요.",
@@ -131,7 +141,17 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "session_list_success": "목록을 성공적으로 가져왔습니다.",
         "student_sessions_error": "학생 세션 조회 중 오류가 발생했습니다.",
         "not_a_student": "접근이 거부되었습니다. 학생이 아닙니다.",
-        "tutor_availability_fetched": "튜터 가능 시간을 성공적으로 조회했습니다."
+        "tutor_availability_fetched": "튜터 가능 시간을 성공적으로 조회했습니다.",
+        "join_payload_generated": "세션 참가 정보가 생성되었습니다.",
+        "live_status_fetched": "라이브 세션 상태를 조회했습니다.",
+        "live_session_ended": "라이브 세션이 성공적으로 종료되었습니다.",
+        "identity_mismatch": "인증된 사용자와 actor 정보가 일치하지 않습니다.",
+        "slot_not_authorized": "해당 슬롯에 대한 권한이 없습니다.",
+        "outside_join_window": "시작 5분 전부터 종료 10분 후까지만 입장할 수 있습니다.",
+        "student_overlap_conflict": "겹치는 다른 라이브 세션에 이미 참여 중입니다.",
+        "token_generation_failed": "라이브 토큰 생성에 실패했습니다.",
+        "room_mismatch": "요청한 room_id가 서버 계산값과 일치하지 않습니다.",
+        "live_waiting_message": "튜터가 아직 입장하지 않았습니다. 잠시만 기다려 주세요."
     }
 }
 
