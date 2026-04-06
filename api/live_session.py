@@ -448,6 +448,8 @@ def live_session_status(
 
     host_joined = bool(room_meta.get("host_joined", False))
     session_state = room_meta.get("session_state", "waiting")
+    if session_state == "ended":
+        host_joined = False
     can_enter = host_joined and session_state != "ended"
 
     return {
@@ -503,7 +505,7 @@ def end_live_session(
     room_meta.update(
         {
             "session_state": "ended",
-            "host_joined": True,
+            "host_joined": False,
             "ended_at": ended_at.isoformat(),
         }
     )
