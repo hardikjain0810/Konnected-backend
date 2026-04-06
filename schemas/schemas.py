@@ -351,3 +351,27 @@ class LiveSessionEndResponse(BaseModel):
     response_code: str
     detail: str
     data: LiveSessionEndData
+
+class LiveSessionAnalyticsRequest(BaseModel):
+    actor_id: str
+    tutor_id: str
+    slot_id: str
+
+class LiveSessionParticipantDuration(BaseModel):
+    actor_id: str
+    actor_type: str
+    total_seconds: int
+    first_joined_at: Optional[datetime] = None
+    last_left_at: Optional[datetime] = None
+
+class LiveSessionAnalyticsData(BaseModel):
+    room_id: str
+    booked_count: int
+    joined_count: int
+    session_ended_at: Optional[datetime] = None
+    participants: List[LiveSessionParticipantDuration]
+
+class LiveSessionAnalyticsResponse(BaseModel):
+    response_code: str
+    detail: str
+    data: LiveSessionAnalyticsData

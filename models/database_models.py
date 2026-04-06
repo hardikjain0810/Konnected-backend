@@ -193,3 +193,40 @@ class Report(Base):
 
     reason = Column(Enum(ReportReason))
     details = Column(String)
+
+
+class LiveSessionStats(Base):
+    __tablename__ = "live_session_stats"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    room_id = Column(String, unique=True, index=True, nullable=False)
+    slot_id = Column(UUID(as_uuid=True), ForeignKey("tutor_slots.id"), nullable=False, index=True)
+    tutor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    booked_count = Column(Integer, default=0, nullable=False)
+    joined_count = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
+    ended_at = Column(DateTime, nullable=True)
+
+
+class LiveSessionParticipant(Base):
+    __tablename__ = "live_session_participants"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    room_id = Column(String, index=True, nullable=False)
+    slot_id = Column(UUID(as_uuid=True), ForeignKey("tutor_slots.id"), nullable=False, index=True)
+    tutor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    actor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    actor_type = Column(String, nullable=False)
+    first_joined_at = Column(DateTime, nullable=False)
+    last_joined_at = Column(DateTime, nullable=True)
+    last_left_at = Column(DateTime, nullable=True)
+    total_seconds = Column(Integer, default=0, nullable=False)
+    is_active = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
+
+    __table_args__ = (
+        UniqueConstraint("room_id", "actor_id", name="uq_live_room_actor"),
+        Index("idx_live_participant_room_actor_type", "room_id", "actor_type"),
+    )

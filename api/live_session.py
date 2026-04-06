@@ -11,7 +11,16 @@ from core.translations import get_text
 from core.utils import get_lang
 from db.database import get_db
 from db.redis import redis_client
-from models.database_models import Booking, TutorSlot, User, Profile, TutorProfile, Timezone
+from models.database_models import (
+    Booking,
+    TutorSlot,
+    User,
+    Profile,
+    TutorProfile,
+    Timezone,
+    LiveSessionStats,
+    LiveSessionParticipant,
+)
 from schemas.schemas import (
     LiveSessionJoinRequest,
     LiveSessionJoinResponse,
@@ -19,6 +28,8 @@ from schemas.schemas import (
     LiveSessionStatusResponse,
     LiveSessionEndRequest,
     LiveSessionEndResponse,
+    LiveSessionAnalyticsRequest,
+    LiveSessionAnalyticsResponse,
 )
 
 router = APIRouter(prefix="/live-session", tags=["live-session"])
@@ -204,6 +215,96 @@ def _get_user_name(db: Session, actor_type: str, actor_uuid: UUID) -> str:
     return user.email if user else str(actor_uuid)
 
 
+def _touch_session_stats(
+    db: Session,
+    room_id: str,
+    slot_uuid: UUID,
+    tutor_uuid: UUID,
+) -> LiveSessionStats:
+    now = datetime.now(timezone.utc)
+    stats = db.query(LiveSessionStats).filter(LiveSessionStats.room_id == room_id).first()
+    booked_count = db.query(Booking).filter(Booking.slot_id == slot_uuid, Booking.tutor_id == tutor_uuid).count()
+
+    if not stats:
+        stats = LiveSessionStats(
+            room_id=room_id,
+            slot_id=slot_uuid,
+            tutor_id=tutor_uuid,
+            booked_count=booked_count,
+            joined_count=0,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(stats)
+        db.flush()
+        return stats
+
+    stats.booked_count = booked_count
+    stats.updated_at = now
+    db.flush()
+    return stats
+
+
+def _mark_participant_joined(
+    db: Session,
+    room_id: str,
+    slot_uuid: UUID,
+    tutor_uuid: UUID,
+    actor_uuid: UUID,
+    actor_type: str,
+) -> None:
+    now = datetime.now(timezone.utc)
+    participant = db.query(LiveSessionParticipant).filter(
+        LiveSessionParticipant.room_id == room_id,
+        LiveSessionParticipant.actor_id == actor_uuid,
+    ).first()
+
+    if not participant:
+        participant = LiveSessionParticipant(
+            room_id=room_id,
+            slot_id=slot_uuid,
+            tutor_id=tutor_uuid,
+            actor_id=actor_uuid,
+            actor_type=actor_type,
+            first_joined_at=now,
+            last_joined_at=now,
+            is_active=True,
+            total_seconds=0,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(participant)
+        db.flush()
+        return
+
+    if not participant.is_active:
+        participant.last_joined_at = now
+        participant.is_active = True
+    participant.updated_at = now
+    db.flush()
+
+
+def _finalize_session_participants(db: Session, room_id: str, ended_at: datetime) -> None:
+    participants = db.query(LiveSessionParticipant).filter(
+        LiveSessionParticipant.room_id == room_id
+    ).all()
+    for participant in participants:
+        if participant.is_active and participant.last_joined_at:
+            delta_seconds = int((ended_at - participant.last_joined_at).total_seconds())
+            participant.total_seconds = int(participant.total_seconds or 0) + max(delta_seconds, 0)
+            participant.last_left_at = ended_at
+            participant.is_active = False
+        participant.updated_at = ended_at
+    db.flush()
+
+
+def _effective_total_seconds(participant: LiveSessionParticipant, now_utc: datetime) -> int:
+    total = int(participant.total_seconds or 0)
+    if participant.is_active and participant.last_joined_at:
+        total += max(int((now_utc - participant.last_joined_at).total_seconds()), 0)
+    return total
+
+
 @router.post("/join", response_model=LiveSessionJoinResponse)
 def join_live_session(
     payload: LiveSessionJoinRequest,
@@ -247,6 +348,7 @@ def join_live_session(
         raise HTTPException(status_code=422, detail=get_text("outside_join_window", lang))
 
     room_id = _build_room_id(payload.tutor_id, slot)
+    stats = _touch_session_stats(db, room_id, slot_uuid, tutor_uuid)
 
     # Overlap rule for student
     if payload.actor_type == "student":
@@ -288,6 +390,11 @@ def join_live_session(
     if can_enter:
         redis_client.set_user_active_room(payload.actor_id, room_id, ttl_seconds=max(settings.ZEGO_TOKEN_EXPIRE_SECONDS, 7200))
         redis_client.add_room_participant(room_id, payload.actor_id, ttl_seconds=max(settings.ZEGO_TOKEN_EXPIRE_SECONDS, 7200))
+        _mark_participant_joined(db, room_id, slot_uuid, tutor_uuid, actor_uuid, payload.actor_type)
+        stats.joined_count = db.query(LiveSessionParticipant).filter(LiveSessionParticipant.room_id == room_id).count()
+        stats.updated_at = datetime.now(timezone.utc)
+
+    db.commit()
 
     return {
         "response_code": "200",
@@ -402,10 +509,19 @@ def end_live_session(
     )
     redis_client.set_live_session_meta(expected_room_id, room_meta, ttl_seconds=7200)
 
+    stats = _touch_session_stats(db, expected_room_id, slot_uuid, tutor_uuid)
+    _finalize_session_participants(db, expected_room_id, ended_at)
+    stats.joined_count = db.query(LiveSessionParticipant).filter(
+        LiveSessionParticipant.room_id == expected_room_id
+    ).count()
+    stats.ended_at = ended_at
+    stats.updated_at = ended_at
+
     participants = redis_client.get_room_participants(expected_room_id)
     for participant_id in participants:
         redis_client.clear_user_active_room(participant_id)
     redis_client.clear_room_participants(expected_room_id)
+    db.commit()
 
     return {
         "response_code": "200",
@@ -414,5 +530,72 @@ def end_live_session(
             "room_id": expected_room_id,
             "ended_at": ended_at,
             "session_state": "ended",
+        },
+    }
+
+@router.post("/analytics", response_model=LiveSessionAnalyticsResponse)
+def live_session_analytics(
+    payload: LiveSessionAnalyticsRequest,
+    req: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    lang = get_lang(req)
+
+    if str(current_user.id) != payload.actor_id:
+        raise HTTPException(status_code=401, detail=get_text("identity_mismatch", lang))
+
+    actor_uuid = _parse_uuid(payload.actor_id, get_text("validation_error", lang))
+    tutor_uuid = _parse_uuid(payload.tutor_id, get_text("validation_error", lang))
+    slot_uuid = _parse_uuid(payload.slot_id, get_text("validation_error", lang))
+
+    slot = db.query(TutorSlot).filter(TutorSlot.id == slot_uuid, TutorSlot.tutor_id == tutor_uuid).first()
+    if not slot:
+        raise HTTPException(status_code=403, detail=get_text("slot_not_authorized", lang))
+
+    is_tutor = actor_uuid == tutor_uuid
+    if not is_tutor:
+        booking = db.query(Booking).filter(
+            Booking.slot_id == slot_uuid,
+            Booking.tutor_id == tutor_uuid,
+            Booking.student_id == actor_uuid
+        ).first()
+        if not booking:
+            raise HTTPException(status_code=403, detail=get_text("slot_not_authorized", lang))
+
+    room_id = _build_room_id(payload.tutor_id, slot)
+    stats = db.query(LiveSessionStats).filter(LiveSessionStats.room_id == room_id).first()
+    participants = db.query(LiveSessionParticipant).filter(
+        LiveSessionParticipant.room_id == room_id,
+        LiveSessionParticipant.actor_type == "student",
+    ).all()
+
+    now_utc = datetime.now(timezone.utc)
+    booked_count = db.query(Booking).filter(
+        Booking.slot_id == slot_uuid,
+        Booking.tutor_id == tutor_uuid
+    ).count()
+    joined_count = db.query(LiveSessionParticipant).filter(
+        LiveSessionParticipant.room_id == room_id
+    ).count()
+
+    return {
+        "response_code": "200",
+        "detail": get_text("live_status_fetched", lang),
+        "data": {
+            "room_id": room_id,
+            "booked_count": int(stats.booked_count) if stats else booked_count,
+            "joined_count": int(stats.joined_count) if stats else joined_count,
+            "session_ended_at": stats.ended_at if stats else None,
+            "participants": [
+                {
+                    "actor_id": str(p.actor_id),
+                    "actor_type": p.actor_type,
+                    "total_seconds": _effective_total_seconds(p, now_utc),
+                    "first_joined_at": p.first_joined_at,
+                    "last_left_at": p.last_left_at,
+                }
+                for p in participants
+            ],
         },
     }
