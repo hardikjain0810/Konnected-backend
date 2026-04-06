@@ -365,15 +365,26 @@ def end_live_session(
 ):
     lang = get_lang(req)
 
+    if str(current_user.id) != payload.actor_id:
+        raise HTTPException(status_code=401, detail=get_text("identity_mismatch", lang))
+
+    actor_uuid = _parse_uuid(payload.actor_id, get_text("validation_error", lang))
     tutor_uuid = _parse_uuid(payload.tutor_id, get_text("validation_error", lang))
     slot_uuid = _parse_uuid(payload.slot_id, get_text("validation_error", lang))
-
-    if current_user.id != tutor_uuid:
-        raise HTTPException(status_code=403, detail=get_text("slot_not_authorized", lang))
 
     slot = db.query(TutorSlot).filter(TutorSlot.id == slot_uuid, TutorSlot.tutor_id == tutor_uuid).first()
     if not slot:
         raise HTTPException(status_code=403, detail=get_text("slot_not_authorized", lang))
+
+    is_tutor = actor_uuid == tutor_uuid
+    if not is_tutor:
+        booking = db.query(Booking).filter(
+            Booking.slot_id == slot_uuid,
+            Booking.tutor_id == tutor_uuid,
+            Booking.student_id == actor_uuid
+        ).first()
+        if not booking:
+            raise HTTPException(status_code=403, detail=get_text("slot_not_authorized", lang))
 
     expected_room_id = _build_room_id(payload.tutor_id, slot)
     if payload.room_id != expected_room_id:

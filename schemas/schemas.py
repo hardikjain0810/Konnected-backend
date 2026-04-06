@@ -337,6 +337,7 @@ class LiveSessionStatusResponse(BaseModel):
     data: LiveSessionStatusData
 
 class LiveSessionEndRequest(BaseModel):
+    actor_id: str
     tutor_id: str
     slot_id: str
     room_id: str
