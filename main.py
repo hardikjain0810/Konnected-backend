@@ -5,9 +5,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from api.auth import router as auth_router
 from api.user_profile import router as profile_router
 from api.tutor import router as tutor_router
-from api.slot_booking import router as slot_booking
-from api.get_tutor_topics import router as get_tutor_topics
-from api.slot_cancel import router as cancel_and_reopen_slot
 from api.live_session import router as live_session_router
 from db.database import engine
 from models.database_models import Base
@@ -32,9 +29,6 @@ init_exception_handlers(app)
 app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(tutor_router)
-app.include_router(slot_booking)
-app.include_router(get_tutor_topics)
-app.include_router(cancel_and_reopen_slot)
 app.include_router(live_session_router)
 
 @app.get("/")

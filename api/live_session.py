@@ -1,6 +1,11 @@
 from datetime import datetime, timedelta, timezone
 import json
 from uuid import UUID
+import importlib.util
+from pathlib import Path
+import random
+import struct
+import base64
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
@@ -33,6 +38,13 @@ from schemas.schemas import (
 )
 
 router = APIRouter(prefix="/live-session", tags=["live-session"])
+
+
+class _TokenInfo:
+    def __init__(self, token: str, error_code: int, error_message: str):
+        self.token = token
+        self.error_code = error_code
+        self.error_message = error_message
 
 
 def _parse_uuid(value: str, error_message: str):
@@ -127,7 +139,6 @@ def _within_join_window(slot: TutorSlot, slot_tz: timezone | None = None) -> boo
 
 
 def _load_zego_generator():
-    # Support common import layouts for ZEGO python assistant package.
     try:
         from zego_server_assistant import generate_token04  # type: ignore
         return generate_token04
@@ -144,12 +155,80 @@ def _load_zego_generator():
     except Exception:
         pass
     try:
-        # Common path when copying ZEGO token generator source directly.
         from zego_token_pkg.python.src.token04 import generate_token04  # type: ignore
         return generate_token04
     except Exception:
         pass
+    try:
+        # Fallback for environments where package import path is not configured.
+        token04_path = Path(__file__).resolve().parents[1] / "zego_token_pkg" / "python" / "src" / "token04.py"
+        if token04_path.exists():
+            spec = importlib.util.spec_from_file_location("local_token04", str(token04_path))
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)  # type: ignore[attr-defined]
+                return getattr(module, "generate_token04", None)
+    except Exception:
+        pass
     return None
+
+
+def _load_aes_cipher():
+    try:
+        from Crypto.Cipher import AES  # type: ignore
+        return AES
+    except Exception:
+        pass
+    try:
+        from Cryptodome.Cipher import AES  # type: ignore
+        return AES
+    except Exception:
+        pass
+    return None
+
+
+def _generate_token04_inline(app_id: int, user_id: str, secret: str, effective_seconds: int, payload: str):
+    if not isinstance(app_id, int) or app_id == 0:
+        return _TokenInfo("", 1, "appID invalid")
+    if not isinstance(user_id, str) or user_id == "":
+        return _TokenInfo("", 3, "userID invalid")
+    if not isinstance(secret, str) or len(secret) != 32:
+        return _TokenInfo("", 5, "secret must be a 32 byte string")
+    if not isinstance(effective_seconds, int) or effective_seconds <= 0:
+        return _TokenInfo("", 6, "effective_time_in_seconds invalid")
+
+    AES = _load_aes_cipher()
+    if AES is None:
+        return _TokenInfo("", 7, "AES cipher backend missing (install pycryptodome)")
+
+    create_time = int(datetime.now(timezone.utc).timestamp())
+    expire_time = create_time + effective_seconds
+    nonce = random.getrandbits(31)
+    token_obj = {
+        "app_id": app_id,
+        "user_id": user_id,
+        "nonce": nonce,
+        "ctime": create_time,
+        "expire": expire_time,
+        "payload": payload,
+    }
+    plain_text = json.dumps(token_obj, separators=(",", ":"), ensure_ascii=False)
+
+    iv_chars = "0123456789abcdef"
+    iv = "".join(random.choice(iv_chars) for _ in range(16))
+    pad = 16 - (len(plain_text.encode("utf-8")) % 16)
+    padded = plain_text + (chr(pad) * pad)
+    cipher = AES.new(secret.encode("utf-8"), AES.MODE_CBC, iv.encode("utf-8"))
+    encrypt_buf = cipher.encrypt(padded.encode("utf-8"))
+
+    result = bytearray(len(encrypt_buf) + 28)
+    result[0:8] = struct.pack("!q", expire_time)
+    result[8:10] = struct.pack("!h", len(iv))
+    result[10:26] = iv.encode("utf-8")
+    result[26:28] = struct.pack("!h", len(encrypt_buf))
+    result[28:] = encrypt_buf
+    token = "04" + base64.b64encode(result).decode("utf-8")
+    return _TokenInfo(token, 0, "success")
 
 
 def _generate_live_token(user_id: str, room_id: str, role: str) -> tuple[str, datetime]:
@@ -160,46 +239,41 @@ def _generate_live_token(user_id: str, room_id: str, role: str) -> tuple[str, da
     if app_id <= 0:
         raise ValueError("ZEGO_APP_ID is invalid")
 
-    expires_at = datetime.now(timezone.utc) + timedelta(seconds=settings.ZEGO_TOKEN_EXPIRE_SECONDS)
-    effective_seconds = int(settings.ZEGO_TOKEN_EXPIRE_SECONDS)
+    expire_seconds = int(settings.ZEGO_TOKEN_EXPIRE_SECONDS)
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=expire_seconds)
 
-    # Restrict token to this room; allow login + publish.
     token_payload = json.dumps(
         {
             "room_id": room_id,
             "privilege": {
                 "1": 1,
-                "2": 1,
+                "2": 1
             },
-            "stream_id_list": [],
-            "role": role,
+            "role": role
         },
         separators=(",", ":"),
     )
 
     generator = _load_zego_generator()
     if generator is None:
-        raise ValueError("ZEGO token04 generator package not installed")
+        token_info = _generate_token04_inline(
+            app_id,
+            user_id,
+            settings.ZEGO_SERVER_SECRET,
+            expire_seconds,
+            token_payload,
+        )
+    else:
+        token_info = generator(app_id, user_id, settings.ZEGO_SERVER_SECRET, expire_seconds, token_payload)
 
-    try:
-        token = generator(app_id, user_id, settings.ZEGO_SERVER_SECRET, effective_seconds, token_payload)
-    except TypeError:
-        # Some helper versions don't take payload in signature.
-        token = generator(app_id, user_id, settings.ZEGO_SERVER_SECRET, effective_seconds)
-
-    if hasattr(token, "error_code"):
-        if int(getattr(token, "error_code", -1)) != 0:
-            raise ValueError(getattr(token, "error_message", "Unknown ZEGO token error"))
-        token = getattr(token, "token", "")
-    elif isinstance(token, tuple):
-        # Defensive support if SDK returns (token, error)
-        token = token[0]
-
+    error_code = int(getattr(token_info, "error_code", 0))
+    if error_code != 0:
+        raise ValueError(getattr(token_info, "error_message", "ZEGO token generation failed"))
+    token = getattr(token_info, "token", "")
     if not token:
         raise ValueError("Token generation returned empty token")
 
-    return str(token), expires_at
-
+    return token, expires_at
 
 def _get_user_name(db: Session, actor_type: str, actor_uuid: UUID) -> str:
     if actor_type == "student":
@@ -290,8 +364,23 @@ def _finalize_session_participants(db: Session, room_id: str, ended_at: datetime
     ).all()
     for participant in participants:
         if participant.is_active and participant.last_joined_at:
-            delta_seconds = int((ended_at - participant.last_joined_at).total_seconds())
-            participant.total_seconds = int(participant.total_seconds or 0) + max(delta_seconds, 0)
+            last_joined = participant.last_joined_at
+            if last_joined.tzinfo is None:
+                # assume stored as UTC if naive
+                last_joined = last_joined.replace(tzinfo=timezone.utc)
+
+            delta_seconds = int((ended_at - last_joined).total_seconds())
+            add_seconds = max(delta_seconds, 0)
+
+            # Defensive fallback: if the segment delta is non-positive but we have
+            # a first join marker, use first_joined_at to avoid losing duration.
+            if add_seconds == 0 and participant.first_joined_at:
+                first_joined = participant.first_joined_at
+                if first_joined.tzinfo is None:
+                    first_joined = first_joined.replace(tzinfo=timezone.utc)
+                add_seconds = max(int((ended_at - first_joined).total_seconds()), 0)
+
+            participant.total_seconds = int(participant.total_seconds or 0) + add_seconds
             participant.last_left_at = ended_at
             participant.is_active = False
         participant.updated_at = ended_at
@@ -300,9 +389,32 @@ def _finalize_session_participants(db: Session, room_id: str, ended_at: datetime
 
 def _effective_total_seconds(participant: LiveSessionParticipant, now_utc: datetime) -> int:
     total = int(participant.total_seconds or 0)
+    if total == 0 and participant.first_joined_at:
+        first_joined = participant.first_joined_at
+        if first_joined.tzinfo is None:
+            first_joined = first_joined.replace(tzinfo=timezone.utc)
+
+        if participant.last_left_at:
+            last_left = participant.last_left_at
+            if last_left.tzinfo is None:
+                last_left = last_left.replace(tzinfo=timezone.utc)
+            total = max(int((last_left - first_joined).total_seconds()), 0)
+        else:
+            total = max(int((now_utc - first_joined).total_seconds()), 0)
+
     if participant.is_active and participant.last_joined_at:
-        total += max(int((now_utc - participant.last_joined_at).total_seconds()), 0)
+        last_joined = participant.last_joined_at
+        if last_joined.tzinfo is None:
+            last_joined = last_joined.replace(tzinfo=timezone.utc)
+        total += max(int((now_utc - last_joined).total_seconds()), 0)
     return total
+
+
+def _format_mm_ss(total_seconds: int) -> str:
+    total_seconds = max(int(total_seconds or 0), 0)
+    minutes = total_seconds // 60
+    seconds = total_seconds % 60
+    return f"{minutes:02d}:{seconds:02d}"
 
 
 @router.post("/join", response_model=LiveSessionJoinResponse)
@@ -391,7 +503,10 @@ def join_live_session(
         redis_client.set_user_active_room(payload.actor_id, room_id, ttl_seconds=max(settings.ZEGO_TOKEN_EXPIRE_SECONDS, 7200))
         redis_client.add_room_participant(room_id, payload.actor_id, ttl_seconds=max(settings.ZEGO_TOKEN_EXPIRE_SECONDS, 7200))
         _mark_participant_joined(db, room_id, slot_uuid, tutor_uuid, actor_uuid, payload.actor_type)
-        stats.joined_count = db.query(LiveSessionParticipant).filter(LiveSessionParticipant.room_id == room_id).count()
+        stats.joined_count = db.query(LiveSessionParticipant).filter(
+            LiveSessionParticipant.room_id == room_id,
+            LiveSessionParticipant.actor_type == "student",
+        ).count()
         stats.updated_at = datetime.now(timezone.utc)
 
     db.commit()
@@ -514,7 +629,8 @@ def end_live_session(
     stats = _touch_session_stats(db, expected_room_id, slot_uuid, tutor_uuid)
     _finalize_session_participants(db, expected_room_id, ended_at)
     stats.joined_count = db.query(LiveSessionParticipant).filter(
-        LiveSessionParticipant.room_id == expected_room_id
+        LiveSessionParticipant.room_id == expected_room_id,
+        LiveSessionParticipant.actor_type == "student",
     ).count()
     stats.ended_at = ended_at
     stats.updated_at = ended_at
@@ -569,7 +685,6 @@ def live_session_analytics(
     stats = db.query(LiveSessionStats).filter(LiveSessionStats.room_id == room_id).first()
     participants = db.query(LiveSessionParticipant).filter(
         LiveSessionParticipant.room_id == room_id,
-        LiveSessionParticipant.actor_type == "student",
     ).all()
 
     now_utc = datetime.now(timezone.utc)
@@ -578,7 +693,8 @@ def live_session_analytics(
         Booking.tutor_id == tutor_uuid
     ).count()
     joined_count = db.query(LiveSessionParticipant).filter(
-        LiveSessionParticipant.room_id == room_id
+        LiveSessionParticipant.room_id == room_id,
+        LiveSessionParticipant.actor_type == "student",
     ).count()
 
     return {
@@ -594,6 +710,7 @@ def live_session_analytics(
                     "actor_id": str(p.actor_id),
                     "actor_type": p.actor_type,
                     "total_seconds": _effective_total_seconds(p, now_utc),
+                    "total_duration": _format_mm_ss(_effective_total_seconds(p, now_utc)),
                     "first_joined_at": p.first_joined_at,
                     "last_left_at": p.last_left_at,
                 }

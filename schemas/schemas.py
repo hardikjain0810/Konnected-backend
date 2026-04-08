@@ -144,6 +144,8 @@ class TutorDetailData(BaseModel):
 
 
 class TutorDetailResponse(BaseModel):
+    response_code: str
+    detail: str
     data: Optional[TutorDetailData] = None
 
 class SlotBookingCreate(BaseModel):
@@ -361,6 +363,7 @@ class LiveSessionParticipantDuration(BaseModel):
     actor_id: str
     actor_type: str
     total_seconds: int
+    total_duration: str
     first_joined_at: Optional[datetime] = None
     last_left_at: Optional[datetime] = None
 

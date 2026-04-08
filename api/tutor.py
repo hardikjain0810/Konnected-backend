@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from db.database import get_db
 from models.database_models import User, TutorProfile, Language, TutorTopic, RoleType, UserRole, TutorSlot, AvailabilityRule, Profile, Booking, SlotStatus
-from schemas.schemas import TutorProfileCreate, TutorProfileResponse, TutorDetailResponse, MarketplaceResponse, GetTutorAvailability, GetTutorAvailabilityResponse, TutorSearchRequest, AvailabilityRuleCreate, AvailabilityResponse, GetAvailabilityRuleCreate, GetAvailabilityResponse
+from schemas.schemas import TutorProfileCreate, TutorProfileResponse, TutorDetailResponse, MarketplaceResponse, GetTutorAvailability, GetTutorAvailabilityResponse, TutorSearchRequest, AvailabilityRuleCreate, AvailabilityResponse, GetAvailabilityRuleCreate, GetAvailabilityResponse, TutorTopicRequest, TutorTopicResponse, CancelSlotCreate, CancelSlotResponse
 from datetime import datetime, timedelta, date, timezone
 from core.utils import get_lang
 from core.auth import get_current_user
@@ -273,7 +273,7 @@ async def get_tutor_details(tutor_id: UUID, req: Request, db: Session = Depends(
         filter(
             TutorSlot.tutor_id == tutor_id,
             TutorSlot.start_at > datetime.now(timezone.utc),
-            TutorSlot.status == "open"
+            TutorSlot.status != "disabled"
         ).\
         order_by(asc(TutorSlot.start_at)).\
         limit(3).all()
@@ -487,3 +487,86 @@ def get_tutor_availability(
         "detail": get_text("availability_list_success", lang),
         "data": formatted_data
     }
+
+@router.post("/get-topics", response_model=TutorTopicResponse)
+async def get_tutor_topics(
+    request: TutorTopicRequest,
+    req: Request,
+    db: Session = Depends(get_db)
+):
+    lang = get_lang(req)
+    # Look up the profile by tutor_id
+    profile = db.query(TutorProfile).filter(
+        TutorProfile.user_id == request.tutor_id
+    ).first()
+
+    # Handle case where tutor doesn't exist
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=get_text("tutor_profile_not_found", lang)
+        )
+
+    # Return the topics list
+    return {
+        "response_code": "1",
+        "detail": get_text("tutor_topics_retrieved", lang, name=profile.name),
+        "topics": profile.topics if profile.topics else []
+    }
+
+@router.delete("/cancel/{slot_id}", response_model=CancelSlotResponse)
+def delete_tutor_slot(
+    slot_id: UUID, 
+    request: CancelSlotCreate,
+    req: Request,
+    db: Session = Depends(get_db)
+):
+    lang = get_lang(req)
+    # 1. Fetch the specific slot based on tutor_id and the slot_id from params
+    slot = db.query(TutorSlot).filter(
+        TutorSlot.id == slot_id,
+        TutorSlot.tutor_id == request.tutor_id
+    ).first()
+
+    if not slot:
+        raise HTTPException(
+            status_code=404, 
+            detail=get_text("slot_not_found_or_owner", lang)
+        )
+
+    # 2. Find the corresponding AvailabilityRule
+    # We match by tutor, date, and start_time to find the exact rule that created this 30m slot
+    rule = db.query(AvailabilityRule).filter(
+        AvailabilityRule.tutor_id == slot.tutor_id,
+        AvailabilityRule.date == cast(slot.start_at, Date),
+        AvailabilityRule.start_time == cast(slot.start_at, Time)
+    ).first()
+
+    try:
+        # 3. Action: Delete from AvailabilityRule table
+        if rule:
+            db.delete(rule)
+        
+            # 4. Action: Mark TutorSlot as 'disabled' instead of deleting
+            # Note: Ensure "disabled" is a valid value in your SlotStatus Enum or String column
+            slot.status = "disabled" 
+        
+        db.commit()
+        db.refresh(slot)
+
+        return {
+            "response_code": "1",
+            "detail": get_text("slot_disabled_success", lang),
+            "data": [
+                {
+                    "tutor_id": str(request.tutor_id),
+                    "slot_id": str(slot_id),
+                    "new_status": slot.status
+                }
+            ]
+        }
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Cancellation Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=get_text("slot_cancel_error", lang))
